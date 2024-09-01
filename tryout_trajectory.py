@@ -139,7 +139,7 @@ if __name__ == "__main__":
     # Cameras
     parser.add_argument("--cameras", type=str, nargs='+', default=['top'], choices=['top', 'left', 'right', 'front', 'back'], help="Set which cameras to enable.")
     # Output Path
-    parser.add_argument("--output_path", type=str, required=True, help="The path to save the outputs to.")
+    parser.add_argument("--output_path", type=str, required=True, default="benchmark/image_capture", help="The path to save the outputs to.")
     # Render Quality
     parser.add_argument("--render_quality", type=int, default=5, help="The Render Quality of the output.")
     # Scene
