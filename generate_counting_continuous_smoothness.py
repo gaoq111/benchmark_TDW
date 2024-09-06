@@ -85,7 +85,7 @@ def main(args):
     special_lib = ['prim_cone', 'prim_cube', 'prim_cyl', 'prim_sphere']
 
     object_materials = ["metal_brushed_copper", "limestone_white", "sand_covered_stone_ground"]
-    material_tuples = list(itertools.combinations(object_materials, 2))
+    material_tuples = list(itertools.permutations(object_materials, 2))
 
     images_info = {}
 
@@ -103,7 +103,7 @@ def main(args):
         for camera_position in tqdm(camera_positions, desc="Processing camera positions", leave=False):
             for color_tuple in tqdm(color_tuples, desc="Processing colors", leave=False):
                 for material_tuple in tqdm(material_tuples, desc="Processing materials", leave=False):
-                    for _ in range(4):
+                    for _ in range(2):
                         selected_obj_names = random.sample(special_lib, 2)
 
                         # General rendering configurations
