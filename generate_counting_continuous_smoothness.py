@@ -158,12 +158,13 @@ def main(args):
 
                             position = {
                                 "x": random.uniform(-0.8, 0.8),
-                                "y": floor_height +0.02,
+                                "y": floor_height +0.03,
                                 "z": random.uniform(-0.8, 0.8)
                             }
 
                             if scene == "tdw_room":
                                 position["y"] += 0.01
+                            
 
                             if positions == []:
                                 positions.append(position)
