@@ -56,7 +56,7 @@ def get_action_coordinates(action):
 def main(args):
     # Launch TDW Build
     try:
-        c = Controller(launch_build=False)
+        c = Controller(port=1072, launch_build=False)
     except Exception as e:
         print(e)
     
@@ -124,7 +124,7 @@ def main(args):
             commands = []
             commands.append({"$type": "teleport_object", 
                             "position": {"x": x_d, "z": y_d, "y": y }, 
-                            "id": object_id, "physics": True, "absolute": True, "use_centroid": False})
+                            "id": object_id, "physics": False, "absolute": True, "use_centroid": False})
             c.communicate(commands)
 
     # Terminate the server after the job is done
@@ -148,7 +148,7 @@ if __name__ == "__main__":
     parser.add_argument("--object", type=str, default="prim_sphere")
     parser.add_argument("--object_position", type=str, default="center", choices=['center', 'top', 'right', 'bottom', 'left'], help="Set the objects inital position.")
     parser.add_argument("--custom_position", type=int, nargs='+', default=None, help="Set the objects inital (x,y,z) coordinates.")
-    parser.add_argument("--size", type=float                        , default=1, help="Scale of the object")
+    parser.add_argument("--size", type=float, default=1, help="Scale of the object")
     # Action
     parser.add_argument("--action", type=str, default="circle_1", help="Format: [trajectory]_[radius]")
     # Enable Physics

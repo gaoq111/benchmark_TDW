@@ -1,0 +1,30 @@
+
+X.Org X Server 1.21.1.4
+X Protocol Version 11, Revision 0
+Current Operating System: Linux sn4622116169 5.15.0-117-generic #127-Ubuntu SMP Fri Jul 5 20:13:28 UTC 2024 x86_64
+Kernel command line: BOOT_IMAGE=/vmlinuz-5.15.0-117-generic root=UUID=19345a28-067c-44cb-86a1-8acd958bf91d ro
+xorg-server 2:21.1.4-2ubuntu1.7~22.04.11 (For technical support please see http://www.ubuntu.com/support) 
+Current version of pixman: 0.40.0
+	Before reporting problems, check http://wiki.x.org
+	to make sure that you have the latest version.
+Markers: (--) probed, (**) from config file, (==) default setting,
+	(++) from command line, (!!) notice, (II) informational,
+	(WW) warning, (EE) error, (NI) not implemented, (??) unknown.
+(==) Log file: "/var/log/Xorg.4.log", Time: Fri Sep  6 14:30:51 2024
+(++) Using config file: "/etc/X11/xorg-4.conf"
+(==) Using system config directory "/usr/share/X11/xorg.conf.d"
+
+X.Org X Server 1.21.1.4
+X Protocol Version 11, Revision 0
+Current Operating System: Linux sn4622116169 5.15.0-117-generic #127-Ubuntu SMP Fri Jul 5 20:13:28 UTC 2024 x86_64
+Kernel command line: BOOT_IMAGE=/vmlinuz-5.15.0-117-generic root=UUID=19345a28-067c-44cb-86a1-8acd958bf91d ro
+xorg-server 2:21.1.4-2ubuntu1.7~22.04.11 (For technical support please see http://www.ubuntu.com/support) 
+Current version of pixman: 0.40.0
+	Before reporting problems, check http://wiki.x.org
+	to make sure that you have the latest version.
+Markers: (--) probed, (**) from config file, (==) default setting,
+	(++) from command line, (!!) notice, (II) informational,
+	(WW) warning, (EE) error, (NI) not implemented, (??) unknown.
+(==) Log file: "/var/log/Xorg.5.log", Time: Fri Sep  6 14:31:32 2024
+(++) Using config file: "/etc/X11/xorg-5.conf"
+(==) Using system config directory "/usr/share/X11/xorg.conf.d"

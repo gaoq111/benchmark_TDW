@@ -1,0 +1,9 @@
+name: temporal_positioning
+output_path: default
+port: 1071
+display: :4
+screen_size: [1920, 1080]
+physics: false
+render_quality: 10
+library: models_core.json
+scene: empty_scene # floorplan_2b, empty_scene box_room_2018 archviz_house mm_kitchen_2a

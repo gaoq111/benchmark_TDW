@@ -1,0 +1,11 @@
+name: temporal_positioning
+output_path: default
+port: 1071
+display: :4
+screen_size:
+- 1920
+- 1080
+physics: false
+render_quality: 10
+lib: models_core.json
+scene: archviz_house
