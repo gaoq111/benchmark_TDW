@@ -4,7 +4,6 @@ import os
 import time
 from typing import List, Dict, Any, Literal, Tuple
 from tdw.controller import Controller
-from interface import AvailableSceneType
 from typing import List, Dict, Union
 from tdw.controller import Controller
 import math
@@ -18,7 +17,7 @@ class AbstractTask(abc.ABC):
     def __init__(self, output_path:str = DEFAULT_OUTPUT_PATH,
                  port:int = 1071,
                  display:str = ":4",
-                 scene:AvailableSceneType = "empty_scene",
+                 scene:str = "empty_scene",
                  screen_size:Tuple[int, int] = (1920, 1080),
                  physics:bool = False, # enable physics or not
                  render_quality:int = 10,
@@ -131,6 +130,10 @@ class MoveObject:
         commands = self.generate_commands(movement, magnitude)
         for cmd in commands:
             controller.communicate(cmd)
+            
+    def move_and_get_commands_only(self, movement: str, magnitude: float = 1.0, duration: float = 1.0):
+        commands = self.generate_commands(movement, magnitude)
+        return commands
 
 if __name__ == "__main__":
     task = AbstractTask()

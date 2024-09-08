@@ -1,28 +1,85 @@
 from typing import Literal
 from tdw.librarian import ModelRecord, MaterialLibrarian, ModelLibrarian
 
+AVAILABLE_SCENE = ["empty_scene", "box_room_2018", "box_room_4x5", "building_site"]
+AVAILABLE_OBJECT = [
+    "prim_capsule", 
+    "prim_cone",
+    "prim_sphere",
+    "prim_cube",
+]
+
+AVAILABLE_SCALE_FACTOR = [0.1, 0.2,0.3,0.4,0.5,0.6,0.7]
 
 
+AVAILABLE_COLOR = {
+    "red": {
+        "r": 1, "g": 0, "b": 0, "a": 1
+    },
+    "green": {
+        "r": 0, "g": 1, "b": 0, "a": 1
+    },
+    "blue": {
+        "r": 0, "g": 0, "b": 1, "a": 1
+    },
+    "yellow": {
+        "r": 1, "g": 1, "b": 0, "a": 1
+    },
+    "purple": {
+        "r": 1, "g": 0, "b": 1, "a": 1
+    },
+    "orange": {
+        "r": 1, "g": 0.5, "b": 0, "a": 1
+    },
+    "brown": {
+        "r": 0.5, "g": 0.25, "b": 0, "a": 1
+    },
+    "gray": {
+        "r": 0.5, "g": 0.5, "b": 0.5, "a": 1
+    },
+    "transparent": {
+        "r": 1, "g": 1, "b": 1, "a": 0.5
+    }
+}
+
+# AVAILABLE_MOTION = ["forward", "backward", "left", "right", "up", "down"]
+AVAILABLE_MOTION = ["forward", "backward", "left", "right"]
+
+
+AVAILABLE_CAMERA_POS = {
+    "top": {"x": 0, "z": 0, "y": 3.5},
+    "left": {"x": -4, "z": 0, "y": 0.2},
+    "right": {"x": 4, "z": 0, "y": 0.2},
+    "front": {"x": 0, "z": -4, "y": 0.2},
+    "back": {"x": 0, "z": 4, "y": 0.2},
+    "top-left": {"x": -2, "z": 0, "y": 2},
+    "top-right": {"x": 2, "z": 0, "y": 2},
+    "top-back": {"x": 0, "z": 2, "y": 2},
+    "top-front": {"x": 0, "z": -2, "y": 2}
+}
 
 class ObjectType:
     def __init__(self, model_name:str, 
                  library:str, 
                  position:dict, 
                  rotation:dict, 
-                 scale_factor:dict = {"x": 1, "y": 1, "z": 1}, 
+                 scale_factor: float, 
                  object_id:int = None, 
                  material:str = None,
-                 texture_scale:float = 1):
+                 texture_scale:float = 1,
+                 color: str = "red",
+                 motion: str = "static"):
         self.model_name = model_name
         self.library = library
         self.position = position
         self.rotation = rotation
-        self.scale_factor = scale_factor
+        self.scale_factor = {"x": scale_factor, "y": scale_factor, "z": scale_factor}
         self.object_id = object_id
         self.material = material
         self.model_record = ModelLibrarian(self.library).get_record(self.model_name)
         self.texture_scale = texture_scale
-        
+        self.color = AVAILABLE_COLOR[color]
+        self.motion = motion
     def __str__(self):
         return f"ObjectType(model_name={self.model_name}, library={self.library}, position={self.position}, rotation={self.rotation}, scale_factor={self.scale_factor}, object_id={self.object_id})"
     
@@ -39,41 +96,11 @@ class ObjectType:
             "object_id": self.object_id,
             "material": self.material,
             "texture_scale": self.texture_scale,
-            "model_record": self.model_record
+            "model_record": self.model_record,
+            "color": self.color,
+            "motion": self.motion
         }
 
-
-AvailableSceneType = Literal["empty_scene", "archviz_house", "box_room_2018", "box_room_4x5", "building_site"]
-AvailableObjectType = Literal["sphere", "cube"]
-
-
-AvailableCameraParams = {
-    "top": {
-        "avatar_id": "top",
-        "position": {"x": 0, "y": 2.5, "z": 0},
-        "look_at": {"x": 0, "y": 0, "z": 0},
-    },
-    "left": {
-        "avatar_id": "left",
-        "position": {"x": -2.5, "y": 0, "z": 0},
-        "look_at": {"x": 0, "y": 0, "z": 0},
-    },
-    "right": {
-        "avatar_id": "right",
-        "position": {"x": 2.5, "y": 0, "z": 0},
-        "look_at": {"x": 0, "y": 0, "z": 0},
-    },
-    "front": {
-        "avatar_id": "front",
-        "position": {"x": 0, "y": 0, "z": 2.5},
-        "look_at": {"x": 0, "y": 0, "z": 0},
-    },
-    "back": {
-        "avatar_id": "back",
-        "position": {"x": 0, "y": 0, "z": -2.5},
-        "look_at": {"x": 0, "y": 0, "z": 0},
-    },
-}
 
 
 AvailableMaterialType = Literal[

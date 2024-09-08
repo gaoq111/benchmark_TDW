@@ -77,14 +77,14 @@ def get_object_id(object_type:ObjectType):
     return res
 
 def get_object_shape_id(object_type:ObjectType):
-    TEMPLATE = "{model_name}_texture_scale={texture_scale}_material={material}_color={color}"
+    TEMPLATE = "{model_name}_color={color}"
     res = TEMPLATE.format(model_name=object_type.model_name,
                           texture_scale=object_type.texture_scale,
                           material=object_type.material,
                           color=format_dict_to_string(object_type.color))
     return res
 
-class TemporalPositioning(AbstractTask):
+class TemporalExtension(AbstractTask):
     def __init__(self, output_path:str = None,
                  port:int = 1071,
                  display:str = ":4",
@@ -92,7 +92,7 @@ class TemporalPositioning(AbstractTask):
                  screen_size:Tuple[int, int] = (1920, 1080),
                  physics:bool = False, # enable physics or not
                  render_quality:int = 10,
-                 name:str = "temporal_positioning",
+                 name:str = "temporal_extension",
                  library:str = "models_core.json",
                  camera: List[str] = AVAILABLE_CAMERA_POS.keys()):
         
@@ -209,17 +209,6 @@ class TemporalPositioning(AbstractTask):
                 
                 print(f"Object {obj.model_name} = {obj.object_id} added")
             
-            # self.commands.extend(self.c.get_add_physics_object(
-            #         model_name="ramp_with_platform",
-            #         object_id=0,
-            #         position={"x": 0, "y": 0, "z": 0},
-            #         rotation={"x": 0, "y": 0, "z": 0},
-            #         library="models_special.json",
-            #         scale_factor={"x": 0.7, "y": 0.7, "z": 0.7},
-            #         kinematic=False,
-            #         gravity=False,
-            #     ))  
-            
             main_obj = main_obj_list[0]
             other_objs = fixed_obj_list
             
@@ -237,114 +226,76 @@ class TemporalPositioning(AbstractTask):
             capture = ImageCapture(avatar_ids=self.camera, path=os.path.join(self.output_path, self.name, self.expr_id), png=True)
             self.c.add_ons.append(capture)
             
-            MOVE_STEP = 10
-            PIC_NUM = 4 # the number of pictures serving as the query
+            MOVE_STEP = 6
+            
+            move_dict = {}
+            
+            # the reason why we need to record four of this is because we might want to have > 2 objs
+            moving_order = {
+                "first_start": None,
+                "first_end": None,
+                "last_start": None,
+                "last_end": None
+            }
+            
+            min_start = MOVE_STEP
+            max_start = 0
+            max_end = 0
+            min_end = MOVE_STEP
             
             for obj in self.object_list:
-                if get_object_shape_id(obj) not in self.fixed_object_shape_ids:
-                    print(f"Object {obj.model_name} = {obj.object_id} is moving {obj.motion}, {MOVE_STEP} steps")
-                    for i in tqdm(range(MOVE_STEP), desc=f"Moving object {obj.model_name} = {obj.object_id}"):
-                        move_object_dict[obj.object_id].execute_movement(self.c, obj.motion, magnitude=0.15)
-                    break
+                move_dict[obj.object_id] = np.arange(MOVE_STEP)[np.random.choice(range(MOVE_STEP), size=np.random.randint(1, MOVE_STEP))]
+                if min_start > move_dict[obj.object_id][0]:
+                    min_start = move_dict[obj.object_id][0]
+                    moving_order["first_start"] = get_object_shape_id(obj)
+                if max_end < move_dict[obj.object_id][-1]:
+                    max_end = move_dict[obj.object_id][-1]
+                    moving_order["last_end"] = get_object_shape_id(obj)
+                if min_end > move_dict[obj.object_id][-1]:
+                    min_end = move_dict[obj.object_id][-1]
+                moving_order["first_end"] = get_object_shape_id(obtj)
+                if max_start < move_dict[obj.object_id][0]:
+                    max_start = move_dict[obj.object_id][0]
+                    moving_order["last_start"] = get_object_shape_id(obj)
+            
+            # record who starts moving first and who stops moving first
+
+            
+            for i in range(MOVE_STEP):
+                commands = []
+                for obj in self.object_list:
+                    if obj.object_id in move_dict:
+                        if i in move_dict[obj.object_id]:
+                            move_commands = move_object_dict[obj.object_id].move_and_get_commands_only(movement = obj.motion, magnitude=0.15)
+                            commands.extend(move_commands)
+                self.c.communicate(commands)
             # step1: randomly pick a range,which has length of 4, from (0, 10)
-            random_start = np.random.randint(0, MOVE_STEP - PIC_NUM)
-            query_image_index = []
-            other_image_index = []
-            for i in range(PIC_NUM):
-                query_image_index.append(random_start + i)
-            
-            GEN_NUM = 2 # this means we will include two pics that not belong to those steps
-            OTHER_NUM = PIC_NUM - GEN_NUM - 1 # this means we will include one pic that belongs to those steps
-            
-            for i in range(OTHER_NUM):
-                while True:
-                    index = np.random.randint(0, MOVE_STEP)
-                    if index < np.min(query_image_index) - 3 or index > np.max(query_image_index) + 3:
-                        other_image_index.append(index)
-                        break
-            query_image_index.sort()
-            
-            gen_commands = ["move_object", "set_color", "change_scale", "rotate_object"]
 
-            # we need to know how many imgs have been generated
-            before_gen = len(os.listdir(os.path.join(self.output_path, self.name, self.expr_id, self.camera[0])))
+            query_image_index = list(range(MOVE_STEP))
             
-            print(f"Before gen: {before_gen}, the latters are generated for candidates")
-            
-            for i in range(GEN_NUM):
-                choice = np.random.choice(gen_commands)
-                if choice == "move_object":
-                    print("move_object")
-                    MOVE_STEP = 2
-                    for obj in other_objs:
-                        motion = np.random.choice(AVAILABLE_MOTION)
-                        print(f"GENERATE: Object {obj.model_name} = {obj.object_id} is moving {motion}, {MOVE_STEP} steps")
-                        for i in range(MOVE_STEP):
-                            move_object_dict[obj.object_id].execute_movement(self.c, motion, magnitude=0.3)
-                            
-                elif choice == "set_color":
-                    print("set_color")
-                    for obj in self.object_list:
-                        color = np.random.choice(list(AVAILABLE_COLOR.keys()))
-                        self.c.communicate({"$type": "set_color",
-                                            "color": AVAILABLE_COLOR[color],
-                                            "id": obj.object_id})
-                elif choice == "change_scale":
-                    print("change_scale")
-                    for obj in self.object_list:
-                        scale = np.random.uniform(0.1, 2)
-                        scale_factor = {"x": scale, "y": scale, "z": scale}
-                        self.c.communicate({"$type": "scale_object",
-                                            "scale_factor": scale_factor,
-                                            "id": obj.object_id})
-                elif choice == "rotate_object":
-                    print("rotate_object")
-                    for obj in self.object_list:
-                        rotation = {"x": 0, "y": np.random.uniform(0, 360), "z": 0}
-                        self.c.communicate({"$type": "rotate_object_to",
-                                            "rotation": rotation,
-                                            "id": obj.object_id})
-                        
-                elif choice == "change_scene":
-                    print("change_scene")
-                    self.c.communicate(self.c.get_add_scene(np.random.choice(AVAILABLE_SCENE)))
-                    
 
-            
             output_res_cam = {
                 cam: {
                 } for cam in self.camera
             }
-            
-            gen_img_index = [before_gen + i for i in range(GEN_NUM)]
-            
- 
+
 
             for cam in self.camera:
                 output_path_dict = {
                     "query": [],
-                    "other": [],
-                    "gen": []
                 }
                 for i in query_image_index:
                     output_path_dict["query"].append(os.path.join(self.output_path, self.name, self.expr_id, cam, f"img_{i:04d}.png"))
-                for i in other_image_index:
-                    output_path_dict["other"].append(os.path.join(self.output_path, self.name, self.expr_id, cam, f"img_{i:04d}.png"))
-                for i in gen_img_index:
-                    output_path_dict["gen"].append(os.path.join(self.output_path, self.name, self.expr_id, cam, f"img_{i:04d}.png"))
-
-                output_res_cam[cam]["query"] = output_path_dict["query"][1:] # this contains 3 imgs
-                candidates = [output_path_dict["query"][0]] # 1, this is the ans
-                candidates.extend(output_path_dict["gen"]) # 2
-                candidates.extend(output_path_dict["other"]) # 1
+                    
+                output_res_cam[cam]["query"] = output_path_dict["query"] #
                 
-                # shuffle candidates
-                index = np.arange(len(candidates))
-                np.random.shuffle(index)
-                answer = [i for i, t in enumerate(index) if t == 0][0]
-                candidates = [candidates[i] for i in index]
-                output_res_cam[cam]["candidates"] = candidates
-                output_res_cam[cam]["answer"] = answer
+                
+                output_res_cam[cam]["answer"] = {
+                    "first_start": moving_order["first_start"],
+                    "first_end": moving_order["first_end"],
+                    "last_start": moving_order["last_start"],
+                    "last_end": moving_order["last_end"]
+                }
                 output_res_cam[cam]["camera_direction"] = cam
                 output_res_cam[cam]["main_obj"] = {
                     "model_name": main_obj.model_name,
@@ -382,31 +333,10 @@ class TemporalPositioning(AbstractTask):
             # make the answer img with boxed with red line
 
             for cam in self.camera:
-                # Read and resize query images (3 images)
                 query_imgs = [cv2.imread(img) for img in output_res_cam[cam]["query"]]
                 query_imgs = [cv2.resize(img, (224, 224)) for img in query_imgs]
                 
-                # Read and resize candidate images (4 images)
-                candidate_imgs = [cv2.imread(img) for img in output_res_cam[cam]["candidates"]]
-                candidate_imgs = [cv2.resize(img, (224, 224)) for img in candidate_imgs]
-                
-                # Add red border to the answer image
-                answer_index = output_res_cam[cam]["answer"]
-                border_size = 5
-                target_img = None
-                for i in range(len(candidate_imgs)):
-                    if i == answer_index:
-                        target_img = candidate_imgs[i]
-                        candidate_imgs[i] = cv2.copyMakeBorder(candidate_imgs[i], border_size, border_size, border_size, border_size, cv2.BORDER_CONSTANT, value=[0, 0, 255])
-                    else:
-                        candidate_imgs[i] = cv2.copyMakeBorder(candidate_imgs[i], border_size, border_size, border_size, border_size, cv2.BORDER_CONSTANT, value=[0, 0, 0])
-
-                # Ensure all images are the same size
-                target_size = (224, 224)
-                query_imgs = [target_img] + query_imgs
-                query_imgs = [cv2.resize(img, target_size) for img in query_imgs]
-                candidate_imgs = [cv2.resize(img, target_size) for img in candidate_imgs]
-                
+               
                 # Concatenate query images horizontally
                 query_row = np.hstack(query_imgs)
                 
@@ -414,11 +344,9 @@ class TemporalPositioning(AbstractTask):
                 # blank_img = np.zeros((224, 224, 3), dtype=np.uint8)
                 # query_row = np.hstack([query_row, blank_img])
                 
-                # Concatenate candidate images horizontally
-                candidate_row = np.hstack(candidate_imgs)
                 
                 # Concatenate both rows vertically
-                final_image = np.vstack([query_row, candidate_row])
+                final_image = query_row
                 
                 # Save the final image
                 cv2.imwrite(os.path.join(self.output_path, self.name, self.expr_id, cam, "sample.png"), final_image)
@@ -429,11 +357,11 @@ class TemporalPositioning(AbstractTask):
             print("terminating the controller")
             self.c.communicate({"$type": "terminate"})
 
-@hydra.main(config_path="configs", config_name="temporal_positioning.yaml", version_base=None)
+@hydra.main(config_path="configs", config_name="temporal_extension.yaml", version_base=None)
 def main(cfg: DictConfig):
 
     
-    target_size = 10
+    target_size = 7
     
     ideal_size = len(AVAILABLE_CAMERA_POS) * len(AVAILABLE_MOTION) * len(AVAILABLE_OBJECT) * len(AVAILABLE_COLOR)**2
     
@@ -450,7 +378,7 @@ def main(cfg: DictConfig):
     seed = 0
     while len(gen_id_set) < target_size:
         task = None
-        task = TemporalPositioning(**cfg)
+        task = TemporalExtension(**cfg)
         np.random.seed(seed)
         seed += 1
         main_obj = ObjectType(
@@ -497,7 +425,6 @@ def main(cfg: DictConfig):
             pbar.update(1)
         
         del task
-    
 
 if __name__ == "__main__":
     main()
