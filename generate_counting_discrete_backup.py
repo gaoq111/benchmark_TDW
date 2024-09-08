@@ -207,7 +207,9 @@ def main(args):
                         images_info["material_section"].append(copy.deepcopy(image_info))
 
                         object_shape_1 = objects_info[0]["name"].split("_")[1]
+                        object_shape_1 = "cylinder" if object_shape_1 == "cyl" else object_shape_1
                         object_shape_2 = objects_info[1]["name"].split("_")[1]
+                        object_shape_2 = "cylinder" if object_shape_2 == "cyl" else object_shape_2
                         images_info["shape_section"][-1]["question"] = f"Which are more numerous in the image, {object_shape_1}s or {object_shape_2}s? Answer with the letter of your choice: A. {object_shape_1}s B. {object_shape_2}s"
                         images_info["shape_section"][-1]["gt_answer"] = "A" if objects_info[0]["obj_num"] > objects_info[1]["obj_num"] else "B"
 

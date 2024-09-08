@@ -217,7 +217,9 @@ def main(args):
                         # images_info["material_section"].append(copy.deepcopy(image_info))
 
                         object_shape_1 = objects_info[0]["name"].split("_")[1]
+                        object_shape_1 = "cylinder" if object_shape_1 == "cyl" else object_shape_1
                         object_shape_2 = objects_info[1]["name"].split("_")[1]
+                        object_shape_2 = "cylinder" if object_shape_2 == "cyl" else object_shape_2
                         images_info["shape_section"][-1]["question"] = f"Which object has a smoother surface in the image, the {object_shape_1} or the {object_shape_2}? Answer with the letter of your choice: A. {object_shape_1} B. {object_shape_2}"
                         images_info["shape_section"][-1]["gt_answer"] = "A" if object_materials.index(objects_info[0]["material"]) < object_materials.index(objects_info[1]["material"]) else "B"
 
