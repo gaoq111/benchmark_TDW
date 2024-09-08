@@ -75,7 +75,7 @@ def main(args):
     # Define scenes
     scenes = ["tdw_room", "monkey_physics_room", "box_room_2018"]
 
-    tables = {"marble_table": 0.5, "trapezoidal_table": 0.7, "small_table_green_marble": 1.4}
+    tables = {"marble_table": 0.5, "trapezoidal_table": 0.6, "small_table_green_marble": 1.4}
 
 
     # Define object colors
