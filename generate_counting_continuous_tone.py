@@ -201,11 +201,11 @@ def main(args):
                                         positions.append(position)
                                     else:
                                         if camera_position == "left" or camera_position == "right":
-                                            while abs(position["z"] - positions[0]["z"]) < 0.15:
-                                                position["z"] = random.uniform(-0.4, 0.4)
+                                            while abs(position["z"] - positions[0]["z"]) < 0.2:
+                                                position["z"] = random.uniform(-0.3, 0.3)
                                         elif camera_position == "front" or camera_position == "back" or camera_position == "top":
                                             while abs(position["x"] - positions[0]["x"]) < 0.3:
-                                                position["x"] = random.uniform(-0.5, 0.5)
+                                                position["x"] = random.uniform(-0.4, 0.4)
 
                                         positions.append(position)
 
