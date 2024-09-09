@@ -23,7 +23,7 @@ from tdw.add_ons.interior_scene_lighting import InteriorSceneLighting
 # DISPLAY=:4 ./TDW.x86_64 -port 1071
 
 # Run this script
-# python3 generate_counting_discrete_backup.py --output_path ./output
+# python3 generate_counting_discrete.py --output_path ./output
 
 # TODO:
 # 1. reconstrcut the code.
@@ -76,31 +76,32 @@ def main(args):
     # Define tables
     tables = {"marble_table": 0.45, "trapezoidal_table": 0.55, "small_table_green_marble": 1.33}
 
+    # Define colors
     object_colors = {
         "red": {"r": 1.0, "g": 0.2, "b": 0.2},  # Red
         "green": {"r": 0.2, "g": 1.0, "b": 0.2},  # Green
         "yellow": {"r": 1.0, "g": 1.0, "b": 0.0}   # Yellow
     }
-
-    
     color_tuples = list(itertools.combinations(object_colors.items(), 2))
 
+    # Define objects
     special_lib = ['prim_cone', 'prim_cube', 'prim_cyl', 'prim_sphere']
 
+    # Define materials
     object_materials = ["limestone_white", "metal_brushed_copper", "wood_american_cherry"]
     material_tuples = list(itertools.permutations(object_materials, 2))
 
+    # Initialize image info
     images_info = {}
-
     images_info["shape_section"] = []    
     images_info["color_section"] = []
     images_info["material_section"] = []
 
-    image_id = 0
-
     # Add CollisionManager to track object collisions
     collision_manager = CollisionManager(enter=True, exit=True, stay=True)
     c.add_ons.append(collision_manager)
+
+    image_id = 0
 
     for scene in tqdm(scenes, desc="Processing scenes"):
         interior_lighting.reset(hdri_skybox="old_apartments_walkway_4k", aperture=8, focus_distance=2.5, ambient_occlusion_intensity=0.125, ambient_occlusion_thickness_modifier=3.5, shadow_strength=1)
@@ -117,7 +118,6 @@ def main(args):
 
                             # Initialize scene
                             commands.append(c.get_add_scene(scene))
-
                             c.communicate(commands)
 
                             # Get floor height
@@ -150,6 +150,7 @@ def main(args):
                                 camera_positions["back"]["z"] = 2.5
 
                             camera = ThirdPersonCamera(position=camera_positions[camera_position], avatar_id=camera_position, look_at={"x": 0, "y": table_height, "z": 0}, field_of_view=55)
+
                             if scene == "monkey_physics_room" and camera_position == "top" and table == "small_table_green_marble":
                                 camera = ThirdPersonCamera(position=camera_positions[camera_position], avatar_id=camera_position, look_at={"x": 0, "y": table_height, "z": 0}, field_of_view=80)
                             elif scene == "monkey_physics_room":
@@ -157,6 +158,7 @@ def main(args):
 
                             c.add_ons.append(camera)
 
+                            # Get colors
                             (color_name_1, color_1), (color_name_2, color_2) = color_tuple
 
                             # Add the ImageCapture add-on only after all objects have been placed
@@ -164,7 +166,7 @@ def main(args):
                             os.makedirs(image_folder, exist_ok=True)
                             c.add_ons.append(ImageCapture(path=image_folder, avatar_ids=[camera.avatar_id], png=True))
 
-
+                            # Generate num of objects
                             obj_num_1 = random.randint(1, 4)
                             obj_num_2 = obj_num_1
                             while obj_num_2 == obj_num_1:
@@ -174,7 +176,7 @@ def main(args):
 
                             image_info = {}
                             objects_info = []
-
+                            
                             for object_name in tqdm(selected_obj_names, desc="Processing objects", leave=False):
                                 lib = "models_special.json"
                                 model_record = ModelLibrarian(lib).get_record(object_name)
@@ -221,7 +223,6 @@ def main(args):
                                 })
 
                                 obj_type += 1
-
 
                             # Render the image
                             c.communicate(commands)
