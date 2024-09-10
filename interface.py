@@ -2,11 +2,18 @@ from typing import Literal
 from tdw.librarian import ModelRecord, MaterialLibrarian, ModelLibrarian
 
 AVAILABLE_SCENE = ["empty_scene", "box_room_2018", "box_room_4x5", "building_site"]
+# AVAILABLE_OBJECT = [
+#     "prim_capsule", 
+#     "prim_cone",
+#     "prim_sphere",
+#     "prim_cube",
+# ]
+
 AVAILABLE_OBJECT = [
-    "prim_capsule", 
     "prim_cone",
     "prim_sphere",
     "prim_cube",
+    "prim_cyl",
 ]
 
 AVAILABLE_SCALE_FACTOR = [0.1, 0.2,0.3,0.4,0.5,0.6,0.7]

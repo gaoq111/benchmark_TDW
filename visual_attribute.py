@@ -52,7 +52,7 @@ def get_action_coordinates(action, center):
             side_length = float(num)
             return generate_triangle_coords(num_points=30, side_length=side_length)
 
-def start_tdw_server(display=":4", port=1071):
+def start_tdw_server(display=":4", port=1072):
     command = f"DISPLAY={display} /data/shared/sim/benchmark/tdw/build/TDW.x86_64 -port={port}"
     process = subprocess.Popen(command, shell=True)
     time.sleep(5)  # Wait for the server to start
@@ -69,7 +69,9 @@ def main(args):
         start_time = time.time()
         output_path = args.output_path  #EXAMPLE_CONTROLLER_OUTPUT_PATH.joinpath("image_capture")
         task_name = args.name
-        print(f"Images will be saved to: {os.path.join(output_path, task_name)}")
+        
+        if task_name is not None:
+            output_path = os.path.join(output_path, task_name)
 
         # read the camera and object configs
         with open('scene_settings.yaml', 'r') as file:
@@ -82,7 +84,7 @@ def main(args):
             camera_id = camera_id.lower()
             camera = get_cameras(camera_id, camera_config)
             c.add_ons.append(camera)
-        capture = ImageCapture(avatar_ids=args.cameras, path=os.path.join(output_path, task_name), png=True)
+        capture = ImageCapture(avatar_ids=args.cameras, path=output_path, png=True)
         capture.set(frequency="once")
         c.add_ons.append(capture)
 

@@ -169,3 +169,4 @@ cython_debug/
 
 output_videos/
 image_capture/
+outputs/

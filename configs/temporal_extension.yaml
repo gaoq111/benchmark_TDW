@@ -1,0 +1,9 @@
+name: temporal_extension
+output_path: default
+port: 1072
+display: :4
+screen_size: [512, 512]
+physics: false
+render_quality: 10
+library: models_core.json
+scene: tdw_room # floorplan_2b, empty_scene box_room_2018 archviz_house mm_kitchen_2a tdw_room

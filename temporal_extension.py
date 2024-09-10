@@ -84,9 +84,28 @@ def get_object_shape_id(object_type:ObjectType):
                           color=format_dict_to_string(object_type.color))
     return res
 
+def add_index_label(img, index):
+    # Create a copy of the image to avoid modifying the original
+    labeled_img = img.copy()
+    
+    # Parameters for the text
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    org = (10, 30)  # Upper left corner
+    font_scale = 1
+    color = (0, 255, 0)  # Green color
+    thickness = 2
+    
+    # Add a black background to make text more visible
+    cv2.rectangle(labeled_img, (5, 5), (50, 40), (0, 0, 0), -1)
+    
+    # Add the text
+    cv2.putText(labeled_img, str(index), org, font, font_scale, color, thickness, cv2.LINE_AA)
+    
+    return labeled_img
+
 class TemporalExtension(AbstractTask):
     def __init__(self, output_path:str = None,
-                 port:int = 1071,
+                 port:int = 1072,
                  display:str = ":4",
                  scene:str = "empty_scene",
                  screen_size:Tuple[int, int] = (1920, 1080),
@@ -175,28 +194,26 @@ class TemporalExtension(AbstractTask):
                     obj.library = "models_core.json"
                 
                 obj.model_record = ModelLibrarian(obj.library).get_record(obj.model_name)
-
                 object_id = self.c.get_unique_id()
                 obj.object_id = object_id
                 print(f"Object name: {obj.model_name}, with id = {obj.object_id}")
                 
                 # attention: here the gravity should be turned off
-                self.commands.extend(self.c.get_add_physics_object(model_name=obj.model_name,
-                                                                library=obj.library,
-                                                                gravity=True,
-                                                                position=obj.position,
-                                                                rotation=obj.rotation,
-                                                                scale_factor=obj.scale_factor if obj.scale_factor is not None else {"x": 1, "y": 1, "z": 1},
-                                                                object_id=obj.object_id))
-                
-                self.commands.append({"$type": "set_color",
+                cmds = [{"$type": "add_object", 
+                        "id": obj.object_id, 
+                        "name": obj.model_name, 
+                        "position": obj.position, 
+                        "rotation": obj.rotation, 
+                        "scale_factor": obj.scale_factor["x"]}]
+                cmds.append({"$type": "set_color",
                                     "color": obj.color,
                                     "id": obj.object_id})
+                self.c.communicate(cmds)
                 
-                if obj.material is not None:
-                    print(obj.material)
-                    self.commands.append(self.c.get_add_material(material_name=obj.material))
-                    self.commands.extend(TDWUtils.set_visual_material(c=self.c, substructure=obj.model_record.substructure, material=obj.material, object_id=obj.object_id))
+                # if obj.material is not None:
+                #     print(obj.material)
+                #     self.commands.append(self.c.get_add_material(material_name=obj.material))
+                #     self.commands.extend(TDWUtils.set_visual_material(c=self.c, substructure=obj.model_record.substructure, material=obj.material, object_id=obj.object_id))
                 
                 # if obj.texture_scale is not None:
                 #     for sub_object in obj.model_record.substructure:
@@ -244,7 +261,11 @@ class TemporalExtension(AbstractTask):
             min_end = MOVE_STEP
             
             for obj in self.object_list:
-                move_dict[obj.object_id] = np.arange(MOVE_STEP)[np.random.choice(range(MOVE_STEP), size=np.random.randint(1, MOVE_STEP))]
+                move_dict[obj.object_id] = np.sort(np.random.choice(MOVE_STEP, size=np.random.randint(1, MOVE_STEP+1), replace=False))
+                print(f"obj: {obj.model_name}, move_dict: {move_dict[obj.object_id]}")
+                while (move_dict[obj.object_id])[0] == min_start or (move_dict[obj.object_id])[-1] == max_end:
+                    print("Not valid, cannot discriminate which one is first or which one is last")
+                    move_dict[obj.object_id] = np.sort(np.random.choice(MOVE_STEP, size=np.random.randint(1, MOVE_STEP+1), replace=False))
                 if min_start > move_dict[obj.object_id][0]:
                     min_start = move_dict[obj.object_id][0]
                     moving_order["first_start"] = get_object_shape_id(obj)
@@ -253,21 +274,23 @@ class TemporalExtension(AbstractTask):
                     moving_order["last_end"] = get_object_shape_id(obj)
                 if min_end > move_dict[obj.object_id][-1]:
                     min_end = move_dict[obj.object_id][-1]
-                moving_order["first_end"] = get_object_shape_id(obtj)
+                    moving_order["first_end"] = get_object_shape_id(obj)
                 if max_start < move_dict[obj.object_id][0]:
                     max_start = move_dict[obj.object_id][0]
                     moving_order["last_start"] = get_object_shape_id(obj)
             
             # record who starts moving first and who stops moving first
 
-            
+            print(f"Move Step: {MOVE_STEP}")
             for i in range(MOVE_STEP):
                 commands = []
                 for obj in self.object_list:
                     if obj.object_id in move_dict:
                         if i in move_dict[obj.object_id]:
-                            move_commands = move_object_dict[obj.object_id].move_and_get_commands_only(movement = obj.motion, magnitude=0.15)
+                            magnitude = 1.0 / len(move_dict[obj.object_id])
+                            move_commands = move_object_dict[obj.object_id].move_and_get_commands_only(movement = obj.motion, magnitude=magnitude)
                             commands.extend(move_commands)
+                print(f"Step {i} completed")
                 self.c.communicate(commands)
             # step1: randomly pick a range,which has length of 4, from (0, 10)
 
@@ -334,23 +357,34 @@ class TemporalExtension(AbstractTask):
 
             for cam in self.camera:
                 query_imgs = [cv2.imread(img) for img in output_res_cam[cam]["query"]]
-                query_imgs = [cv2.resize(img, (224, 224)) for img in query_imgs]
                 
-               
+                # Add index labels to images
+                labeled_query_imgs = [add_index_label(img, i) for i, img in enumerate(query_imgs)]
+                
                 # Concatenate query images horizontally
-                query_row = np.hstack(query_imgs)
-                
-                # Add a blank image to match the width of candidate row
-                # blank_img = np.zeros((224, 224, 3), dtype=np.uint8)
-                # query_row = np.hstack([query_row, blank_img])
-                
-                
-                # Concatenate both rows vertically
-                final_image = query_row
+                ROW_SIZE = 3
+                rows = [
+                    np.hstack(labeled_query_imgs[i*ROW_SIZE:(i+1)*ROW_SIZE]) for i in range(len(labeled_query_imgs) // ROW_SIZE)
+                ]
+                final_image = np.vstack(rows)
                 
                 # Save the final image
                 cv2.imwrite(os.path.join(self.output_path, self.name, self.expr_id, cam, "sample.png"), final_image)
                 
+                # Create MP4 video
+                output_video_path = os.path.join(self.output_path, self.name, self.expr_id, cam, "sample_video.avi")
+                frame_size = (512, 512)  # Assuming each image is 224x224
+                fps = 2  # You can adjust this value to change the speed of the video
+    
+                fourcc = cv2.VideoWriter_fourcc(*'MJPG')  # Use MJPG codec
+                out = cv2.VideoWriter(output_video_path, fourcc, fps, frame_size)
+                for img in labeled_query_imgs:
+                    out.write(img)
+                
+                
+                out.release()
+                
+                print(f"Video saved to {output_video_path}")
         except Exception as e:
             traceback.print_exc()   
         finally:
@@ -384,7 +418,7 @@ def main(cfg: DictConfig):
         main_obj = ObjectType(
                 model_name=np.random.choice(AVAILABLE_OBJECT),
                 library="models_core.json",
-                position={"x": np.random.uniform(x_range[0], x_range[1]), "y": 0.2, "z": np.random.uniform(z_range[0], z_range[1])},
+                position={"x": np.random.uniform(x_range[0], x_range[1]), "y": 0.1, "z": np.random.uniform(z_range[0], z_range[1])},
                 rotation={"x": 0, "y": np.random.uniform(rotation_range[0], rotation_range[1]), "z": 0},
                 scale_factor=np.random.choice(AVAILABLE_SCALE_FACTOR),
                 texture_scale=1,
@@ -395,13 +429,13 @@ def main(cfg: DictConfig):
         fixed_obj = ObjectType(
                 model_name=np.random.choice(AVAILABLE_OBJECT),
                 library="models_core.json",
-                position={"x": np.random.uniform(x_range[0], x_range[1]), "y": 0.2, "z": np.random.uniform(z_range[0], z_range[1])},
+                position={"x": np.random.uniform(x_range[0], x_range[1]), "y": 0, "z": np.random.uniform(z_range[0], z_range[1])},
                 rotation={"x": 0, "y": np.random.uniform(rotation_range[0], rotation_range[1]), "z": 0},
                 scale_factor=np.random.choice(AVAILABLE_SCALE_FACTOR),
                 texture_scale=1,
                 object_id=None,
                 material=None,
-                motion=np.random.choice(AVAILABLE_MOTION),
+                motion=np.random.choice([motion for motion in AVAILABLE_MOTION if motion != main_obj.motion]),
                 color=np.random.choice(list(AVAILABLE_COLOR.keys())))
         
         main_obj_shape_id = get_object_shape_id(main_obj)

@@ -148,3 +148,23 @@ def generate_triangle_coords(num_points: int = 100, side_length: float = 1, cent
 
     return list(map(tuple, coords))
 
+
+def generate_line_coords(start_point: tuple, end_point: tuple, num_points: int = 100) -> list:
+    """
+    Generate the coordinates of a line between two points, excluding the starting point.
+
+    :param start_point: A tuple (x_start, y_start) specifying the starting point of the line.
+    :param end_point: A tuple (x_end, y_end) specifying the ending point of the line.
+    :param num_points: The number of points to generate along the line.
+    :return: A list of tuples: [(x1, y1), (x2, y2), ...] (excluding the starting point)
+    """
+
+    x_start, y_start = start_point
+    x_end, y_end = end_point
+
+    # Generate num_points coordinates linearly spaced between start and end (excluding the starting point)
+    x_coords = np.linspace(x_start, x_end, num_points + 1)[1:]  # Exclude the starting point
+    y_coords = np.linspace(y_start, y_end, num_points + 1)[1:]  # Exclude the starting point
+
+    # Combine x and y into a list of tuples
+    return list(zip(x_coords, y_coords))

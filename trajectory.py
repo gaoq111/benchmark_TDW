@@ -124,18 +124,16 @@ def main(args):
                                                 default_physics_values=False,
                                                 object_id=object_id))
 
+        # Change material of object if provided
+        if args.material is not None:
+            commands.append(c.get_add_material(material_name=args.material))
+            # Set all of the object's visual materials.
+            commands.extend(TDWUtils.set_visual_material(c=c, substructure=model_record.substructure, material=args.material, object_id=object_id))
+            
         # set color
         if args.color is not None:
             r, g, b = args.color
             commands.append({"$type": "set_color", "color": {"r": r, "g": g, "b": b, "a": 1.0}, "id": object_id})
-        c.communicate(commands)
-
-        # Change material of object if provided
-        if args.material is not None:
-            commands = [c.get_add_material(material_name=args.material)]
-            # Set all of the object's visual materials.
-            commands.extend(TDWUtils.set_visual_material(c=c, substructure=model_record.substructure, material=args.material, object_id=object_id))
-        c.communicate(commands)
 
         # Get coordinates for motion trajectory
         coordinates = get_action_coordinates(args.action, center)
