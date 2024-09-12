@@ -18,7 +18,6 @@ import json
 import traceback
 from tqdm import tqdm
 
-
 def numpy_to_python(obj):
     if isinstance(obj, np.integer):
         return int(obj)
