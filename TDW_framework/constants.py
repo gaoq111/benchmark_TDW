@@ -2,7 +2,7 @@ from typing import Literal
 from dataclasses import dataclass
 from tdw.librarian import ModelRecord, MaterialLibrarian, ModelLibrarian
 
-AVAILABLE_SCENE = ["empty_scene", "box_room_2018", "box_room_4x5", "building_site"]
+AVAILABLE_SCENE = ["archviz_house", "box_room_2018", "empty_scene", "monkey_physics_room", "ruin", "suburb_scene_2018"]
 # AVAILABLE_OBJECT = [
 #     "prim_capsule", 
 #     "prim_cone",
@@ -11,7 +11,7 @@ AVAILABLE_SCENE = ["empty_scene", "box_room_2018", "box_room_4x5", "building_sit
 # ]
 
 AVAILABLE_OBJECT = [
-    "prim_cone",
+    "prim_cone", 
     "prim_sphere",
     "prim_cube",
     "prim_cyl",
@@ -45,18 +45,9 @@ AVAILABLE_COLOR = {
     "gray": {
         "r": 0.5, "g": 0.5, "b": 0.5, "a": 1
     },
-    # "cran": {
-    #     "r": 0.737, "g": 0, "b": 0.129, "a": 1
-    # },
-    "black": {
-        "r": 0, "g": 0, "b": 0, "a": 1
-    },
-    "white": {
-        "r": 1, "g": 1, "b": 1, "a": 1
-    },
     "transparent": {
         "r": 1, "g": 1, "b": 1, "a": 0.5
-    },
+    }
 }
 
 # AVAILABLE_MOTION = ["forward", "backward", "left", "right", "up", "down"]
@@ -69,28 +60,31 @@ AVAILABLE_CAMERA_POS = {
     "right": {"x": 4, "z": 0, "y": 0.2},
     "front": {"x": 0, "z": -4, "y": 0.2},
     "back": {"x": 0, "z": 4, "y": 0.2},
+    "top-left": {"x": -2, "z": 0, "y": 2},
+    "top-right": {"x": 2, "z": 0, "y": 2},
+    "top-back": {"x": 0, "z": 2, "y": 2},
+    "top-front": {"x": 0, "z": -2, "y": 2}
 }
 @dataclass
 class ObjectType:
     def __init__(self, model_name:str, 
+                 library:str, 
                  position:dict, 
                  rotation:dict, 
                  scale_factor: float=1, 
-                 library:str = "models_core.json",
-                 model_record:ModelRecord = None,
                  object_id:int = None, 
                  material:str = None,
                  texture_scale:float = 1,
                  color: str = "red",
                  motion: str = "static"):
         self.model_name = model_name
+        self.library = library
         self.position = position
         self.rotation = rotation
         self.scale_factor = {"x": scale_factor, "y": scale_factor, "z": scale_factor}
         self.object_id = object_id
-        self.library = library
-        self.model_record = model_record
         self.material = material
+        self.model_record = ModelLibrarian(self.library).get_record(self.model_name)
         self.texture_scale = texture_scale
         self.color = AVAILABLE_COLOR[color]
         self.motion = motion

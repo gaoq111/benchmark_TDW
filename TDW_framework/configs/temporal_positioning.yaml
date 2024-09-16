@@ -1,7 +1,7 @@
-name: temporal_extension
-output_path: yjx_test
-port: 1072
-display: :5
+name: temporal_positioning
+output_path: yjx_test2
+port: 1071
+display: :4
 screen_size: [512, 512]
 physics: false
 render_quality: 10
