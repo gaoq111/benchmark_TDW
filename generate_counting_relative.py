@@ -84,12 +84,16 @@ def validate_color_shape_distribution(dic, colors, shapes):
     return True
 
 
-def avoid_adjacency(position, positions, axis):
+def avoid_adjacency(position, positions):
     while True:
         adjacent_flag = False
         for prev_position in positions:
-            if abs(position[axis] - prev_position[axis]) < 0.05:
-                position[axis] = random.uniform(-0.35, 0.35)
+            if abs(position["z"] - prev_position["z"]) < 0.05:
+                position["z"] = random.uniform(-0.35, 0.35)
+                adjacent_flag = True
+                break
+            if abs(position["x"] - prev_position["x"]) < 0.1:
+                position["x"] = random.uniform(-0.8, 0.8)
                 adjacent_flag = True
                 break
         
@@ -151,127 +155,127 @@ def main(args):
 
     for scene in tqdm(scenes, desc="Processing scenes"):
         interior_lighting.reset(hdri_skybox="old_apartments_walkway_4k", aperture=8, focus_distance=2.5, ambient_occlusion_intensity=0.125, ambient_occlusion_thickness_modifier=3.5, shadow_strength=1)
-        for camera_position in tqdm(camera_positions, desc="Processing camera positions", leave=False):
+        for shape_tuple in tqdm(shape_tuples, desc="Processing shapes", leave=False):
             for color_tuple in tqdm(color_tuples, desc="Processing colors", leave=False):
                 for material in tqdm(object_materials, desc="Processing materials", leave=False):
                     for table, table_height in tqdm(tables.items(), desc="Processing tables", leave=False):
-                        for shape_tuple in tqdm(shape_tuples, desc="Processing shapes", leave=False):
+                        combined_tuples = list(itertools.product(color_tuple, shape_tuple))
+                        
+                        while True:
+                            color_shape_dic = generate_color_shape_distribution(combined_tuples)
+                            if validate_color_shape_distribution(color_shape_dic, color_tuple, shape_tuple):
+                                break
 
-                            combined_tuples = list(itertools.product(color_tuple, shape_tuple))
-                            
-                            while True:
-                                color_shape_dic = generate_color_shape_distribution(combined_tuples)
-                                if validate_color_shape_distribution(color_shape_dic, color_tuple, shape_tuple):
-                                    break
+                        # General rendering configurations
+                        commands = [{"$type": "set_screen_size", "width": args.screen_size[0], "height": args.screen_size[1]},
+                                    {"$type": "set_render_quality", "render_quality": args.render_quality}]
 
-                            # General rendering configurations
-                            commands = [{"$type": "set_screen_size", "width": args.screen_size[0], "height": args.screen_size[1]},
-                                        {"$type": "set_render_quality", "render_quality": args.render_quality}]
+                        # Initialize scene
+                        commands.append(c.get_add_scene(scene))
+                        c.communicate(commands)
 
-                            # Initialize scene
-                            commands.append(c.get_add_scene(scene))
+                        # Add table
+                        table_id = c.get_unique_id()
+                        commands.extend(c.get_add_physics_object(model_name=table,
+                                    library="models_core.json",
+                                    object_id=table_id,
+                                    scale_factor={"x": 1.5, "y": 1.5, "z": 1.5},
+                                    position={"x": 0, "y": 0, "z": 0}))
+                        try:
                             c.communicate(commands)
+                        except Exception as e:
+                            print(f"Error communicating with TDW: {e}")
 
-                            # Add table
-                            table_id = c.get_unique_id()
-                            commands.extend(c.get_add_physics_object(model_name=table,
-                                        library="models_core.json",
-                                        object_id=table_id,
-                                        scale_factor={"x": 1.5, "y": 1.5, "z": 1.5},
-                                        position={"x": 0, "y": 0, "z": 0}))
-                            try:
-                                c.communicate(commands)
-                            except Exception as e:
-                                print(f"Error communicating with TDW: {e}")
+                        # Setup camera
+                        if table:
+                            camera_positions["left"]["y"] = table_height + 0.5
+                            camera_positions["right"]["y"] = table_height + 0.5
+                            camera_positions["front"]["y"] = table_height + 0.5
+                            camera_positions["back"]["y"] = table_height + 0.5
 
-                            # Setup camera
-                            if table:
-                                camera_positions["left"]["y"] = table_height + 0.5
-                                camera_positions["right"]["y"] = table_height + 0.5
-                                camera_positions["front"]["y"] = table_height + 0.5
-                                camera_positions["back"]["y"] = table_height + 0.5
+                        if scene == "monkey_physics_room":
+                            camera_positions["top"]["y"] = 2.5
+                            camera_positions["left"]["x"] = -2.5
+                            camera_positions["right"]["x"] = 2.5
+                            camera_positions["front"]["z"] = -2.5
+                            camera_positions["back"]["z"] = 2.5
 
-                            if scene == "monkey_physics_room":
-                                camera_positions["top"]["y"] = 2.5
-                                camera_positions["left"]["x"] = -2.5
-                                camera_positions["right"]["x"] = 2.5
-                                camera_positions["front"]["z"] = -2.5
-                                camera_positions["back"]["z"] = 2.5
+
+                        image_info = {}
+                        objects_info = []
+                        positions = []
+                        
+                        for (color_name, object_name), obj_num in tqdm(color_shape_dic.items(), desc="Processing objects", leave=False):
+                            lib = "models_special.json"
+                            model_record = ModelLibrarian(lib).get_record(object_name)
+
+                            for _ in range(obj_num):
+                                object_id = c.get_unique_id()
+
+                                position = {
+                                    "x": random.uniform(-0.8, 0.8),
+                                    "y": table_height,
+                                    "z": random.uniform(-0.35, 0.35)
+                                }
+
+                                if positions == []:
+                                    positions.append(position)
+                                else:
+                                    avoid_adjacency(position, positions)
+                                    positions.append(position)
+
+                                color = object_colors[color_name]
+
+                                if object_name == "prim_cyl" and table == "small_table_green_marble":
+                                    position["y"] += 0.05
+
+                                scale = random.uniform(0.1, 0.15)
+                                scale = round(scale, 2)
+
+                                # Place object with physics and check for collisions
+                                commands.extend(c.get_add_physics_object(model_name=object_name,
+                                                                    library=lib,
+                                                                    position=position,
+                                                                    default_physics_values=False,
+                                                                    scale_factor={"x": scale, "y": scale, "z": scale},
+                                                                    object_id=object_id))
+                                
+                                # Set the object's material
+                                commands.extend(TDWUtils.set_visual_material(c=c, substructure=model_record.substructure, material=material, object_id=object_id))
+                                commands.append({
+                                    "$type": "set_color",
+                                    "id": object_id,
+                                    "color": color
+                                })
+
+                                object_info = {
+                                    "type": object_name,
+                                    "material": material,
+                                    "color": color_name,
+                                    "size": scale}
+
+                                # Record object info
+                                objects_info.append(object_info)
+
+                        for camera_position in tqdm(camera_positions, desc="Processing camera positions", leave=False):
+                            for add_on in c.add_ons:
+                                if isinstance(add_on, ThirdPersonCamera):
+                                    c.add_ons.remove(add_on)
 
                             camera = ThirdPersonCamera(position=camera_positions[camera_position], avatar_id=camera_position, look_at={"x": 0, "y": table_height, "z": 0}, field_of_view=55)
-
                             if scene == "monkey_physics_room" and camera_position == "top" and table == "small_table_green_marble":
                                 camera = ThirdPersonCamera(position=camera_positions[camera_position], avatar_id=camera_position, look_at={"x": 0, "y": table_height, "z": 0}, field_of_view=80)
                             elif scene == "monkey_physics_room":
                                 camera = ThirdPersonCamera(position=camera_positions[camera_position], avatar_id=camera_position, look_at={"x": 0, "y": table_height, "z": 0}, field_of_view=60)
                             elif scene == "box_room_2018" and camera_position == "top" and table == "small_table_green_marble":
                                 camera = ThirdPersonCamera(position=camera_positions[camera_position], avatar_id=camera_position, look_at={"x": 0, "y": table_height, "z": 0}, field_of_view=75)
-
+                            
                             c.add_ons.append(camera)
 
                             # Add the ImageCapture add-on only after all objects have been placed
                             image_folder = f"{output_path}/original"
                             os.makedirs(image_folder, exist_ok=True)
                             c.add_ons.append(ImageCapture(path=image_folder, avatar_ids=[camera.avatar_id], png=True))
-
-                            image_info = {}
-                            objects_info = []
-
-                            positions = []
-                            
-                            for (color_name, object_name), obj_num in tqdm(color_shape_dic.items(), desc="Processing objects", leave=False):
-                                lib = "models_special.json"
-                                model_record = ModelLibrarian(lib).get_record(object_name)
-
-                                for _ in range(obj_num):
-                                    object_id = c.get_unique_id()
-
-                                    position = {
-                                        "x": random.uniform(-0.8, 0.8),
-                                        "y": table_height,
-                                        "z": random.uniform(-0.3, 0.3)
-                                    }
-
-                                    if positions == []:
-                                        positions.append(position)
-                                    else:
-                                        if camera_position == "left" or camera_position == "right":
-                                            avoid_adjacency(position, positions,"z")
-                                        elif camera_position == "front" or camera_position == "back" or camera_position == "top":
-                                            avoid_adjacency(position, positions, "x")
-
-                                        positions.append(position)
-
-                                    color = object_colors[color_name]
-
-                                    if object_name == "prim_cyl" and table == "small_table_green_marble":
-                                        position["y"] += 0.05
-
-                                    scale = random.uniform(0.1, 0.15)
-
-                                    # Place object with physics and check for collisions
-                                    commands.extend(c.get_add_physics_object(model_name=object_name,
-                                                                        library=lib,
-                                                                        position=position,
-                                                                        default_physics_values=False,
-                                                                        scale_factor={"x": scale, "y": scale, "z": scale},
-                                                                        object_id=object_id))
-                                    
-                                    # Set the object's material
-                                    commands.extend(TDWUtils.set_visual_material(c=c, substructure=model_record.substructure, material=material, object_id=object_id))
-                                    commands.append({
-                                        "$type": "set_color",
-                                        "id": object_id,
-                                        "color": color
-                                    })
-
-                                # Record object info
-                                objects_info.append({
-                                    "name": object_name,
-                                    "obj_num": obj_num,
-                                    "material": material,
-                                    "color": color_name
-                                })
 
                             # Render the image
                             c.communicate(commands)
@@ -325,7 +329,7 @@ def main(args):
                             c.communicate({"$type": "destroy_all_objects"})
                             c.communicate(TDWUtils.create_empty_room(12, 12))
 
-                            image_id += 1
+                        image_id += 1
 
     # Save object info to JSON
     with open(os.path.join(output_path, "relative_counting_info.json"), 'w') as f:
