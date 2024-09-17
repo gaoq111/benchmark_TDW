@@ -7,7 +7,7 @@ from tdw.controller import Controller
 from typing import List, Dict, Union
 import math
 from tqdm import tqdm
-from interface import ObjectType
+from constants import ObjectType
 from tdw.librarian import ModelLibrarian
 
 base_dir = os.path.dirname(os.path.abspath(__file__))

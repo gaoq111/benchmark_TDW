@@ -9,6 +9,9 @@ __pycache__/
 # Specific files
 benchmark/
 try.ipynb
+yjx_test*/
+testbed11/
+outputs/
 
 # Distribution / packaging
 .Python
