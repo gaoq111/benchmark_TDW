@@ -29,6 +29,9 @@ from tdw.add_ons.interior_scene_lighting import InteriorSceneLighting
 # 1. reconstrcut the code.
 # 2. remove defalut light in the scenes.
 # 3. determine how to describe the color (yellow or brown)
+# 4. use 3 camera views instead of 5.
+# 5. make sure the number of questions is between 600 and 2000.
+# 6. for each question, use one color and two shapes.
 
 
 def get_floor_height(controller: Controller) -> float:
