@@ -290,7 +290,7 @@ def main(args):
 if __name__ == "__main__":
     random.seed(42)
     parser = argparse.ArgumentParser(description="Generate a dataset with different object configurations.")
-    parser.add_argument("--screen_size", type=int, nargs='+', default=(1024, 1024), help="Width and Height of Screen. (W, H)")
+    parser.add_argument("--screen_size", type=int, nargs='+', default=(512, 512), help="Width and Height of Screen. (W, H)")
     parser.add_argument("--output_path", type=str, default="./output", help="The path to save the outputs to.")
     parser.add_argument("--render_quality", type=int, default=5, help="The Render Quality of the output.")
 
