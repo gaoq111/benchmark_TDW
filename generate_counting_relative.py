@@ -28,10 +28,7 @@ from tdw.add_ons.interior_scene_lighting import InteriorSceneLighting
 # TODO:
 # 1. reconstrcut the code.
 # 2. remove default light in the scenes.
-# 3. determine how to describe the color (yellow or brown)
-# 4. eliminate obstructions.
-# 5. use 3 camera views instead of 5.
-# 6. make sure the number of questions is between 600 and 2000.
+
 
 
 
@@ -118,9 +115,7 @@ def main(args):
     camera_positions = {
         "top": {"x": 0, "z": 0, "y": 3.0},
         "left": {"x": -3.0, "z": 0, "y": 0.5},
-        "right": {"x": 3.0, "z": 0, "y": 0.5},
         "front": {"x": 0, "z": -3.0, "y": 0.5},
-        "back": {"x": 0, "z": 3.0, "y": 0.5},
     }
 
     # Define scenes
@@ -131,10 +126,15 @@ def main(args):
 
     # Define colors
     object_colors = {
-        "red": {"r": 1.0, "g": 0.2, "b": 0.2},  # Red
-        "green": {"r": 0.2, "g": 1.0, "b": 0.2},  # Green
-        "blue": {"r": 0.2, "g": 0.2, "b": 1.0}    # Blue
+        "red": {"r": 1.0, "g": 0.0, "b": 0.0},         # Red
+        "green": {"r": 0.0, "g": 1.0, "b": 0.0},       # Green
+        "blue": {"r": 0.0, "g": 0.0, "b": 1.0},        # Blue
+        "yellow": {"r": 1.0, "g": 1.0, "b": 0.0},      # Yellow
+        "cyan": {"r": 0.0, "g": 1.0, "b": 1.0},        # Cyan
+        "lime": {"r": 0.75, "g": 1.0, "b": 0.0},       # Lime
+        "purple": {"r": 0.5, "g": 0.0, "b": 0.5}       # Purple
     }
+
     color_tuples = list(itertools.combinations(object_colors.keys(), 2))
 
     # Define objects
@@ -192,16 +192,12 @@ def main(args):
                         # Setup camera
                         if table:
                             camera_positions["left"]["y"] = table_height + 0.5
-                            camera_positions["right"]["y"] = table_height + 0.5
                             camera_positions["front"]["y"] = table_height + 0.5
-                            camera_positions["back"]["y"] = table_height + 0.5
 
                         if scene == "monkey_physics_room":
                             camera_positions["top"]["y"] = 2.5
                             camera_positions["left"]["x"] = -2.5
-                            camera_positions["right"]["x"] = 2.5
                             camera_positions["front"]["z"] = -2.5
-                            camera_positions["back"]["z"] = 2.5
 
 
                         image_info = {}
