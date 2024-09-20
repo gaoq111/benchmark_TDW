@@ -36,7 +36,7 @@ def process_data(data):
                 })
 
         # Append source image path
-        sources[suffix]["source"].append("/data/shared/sim/benchmark/evaluation/datasets/relative_counting/tdw/images/" + image_path)
+        sources[suffix]["source"].append("/data/shared/sim/benchmark/evaluation/datasets/relative_counting_tdw/images/" + image_path)
 
 
 
@@ -59,8 +59,8 @@ def process_data(data):
         else:
             answer = choices.index("They are the same") + 1
 
-        background_map = {"tdw_room": 0, "monkey_physics_room": 1}
-        background = background_map.get(value["scene"], 3)
+        background_map = {"tdw_room": 0, "monkey_physics_room": 1, ,"box_room_2018": 2}
+        background = background_map.get(value["scene"], -1)
 
         new_data.append({
             "source": value["source"],
