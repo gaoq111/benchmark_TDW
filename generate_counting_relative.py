@@ -283,6 +283,7 @@ def main(args):
                             image_info["scene"] = scene
                             image_info["camera_view"] = camera.avatar_id
                             image_info["objects_info"] = objects_info
+                            image_info["table"] = table
 
                             images_info["shape_section"].append(copy.deepcopy(image_info))
                             images_info["color_section"].append(copy.deepcopy(image_info))
