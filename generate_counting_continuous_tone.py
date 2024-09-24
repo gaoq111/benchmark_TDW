@@ -139,7 +139,6 @@ def main(args):
 
     images_info = {}
     images_info["shape_section"] = []    
-    images_info["color_section"] = []
 
     image_id = 0
 
@@ -287,12 +286,12 @@ def main(args):
                                     object_shape_2 = objects_info[1]["type"].split("_")[1]
                                     object_shape_2 = "cylinder" if object_shape_2 == "cyl" else object_shape_2
 
-                                    images_info["shape_section"][-1]["question"] = f"Which object has a deeper color in the image, the {object_shape_1} or the {object_shape_2}? Answer with the letter of your choice: A. {object_shape_1} B. {object_shape_2}"
+                                    images_info["shape_section"][-1]["question"] = f"Which object has a deeper color in the image, the {object_shape_1} or the {object_shape_2}? Answer with the letter of your choice: A. {object_shape_1} B. {object_shape_2} C. The same"
                                     images_info["shape_section"][-1]["gt_answer"] = "A" if color_name_1.split("_")[0] == "dark" else "B"
 
-                                    if color_name_1.split("_")[0] == "dark" and color_name_1.split("_")[0] == "medium":
+                                    if color_name_1.split("_")[0] == "dark" and color_name_1.split("_")[1] == "medium":
                                         images_info["shape_section"][-1]["gt_answer"] = "A"
-                                    elif color_name_1.split("_")[0] == "medium" and color_name_1.split("_")[0] == "dark":
+                                    elif color_name_1.split("_")[0] == "medium" and color_name_1.split("_")[1] == "dark":
                                         images_info["shape_section"][-1]["gt_answer"] = "B"
                                     else:
                                         images_info["shape_section"][-1]["gt_answer"] = "C"
@@ -310,7 +309,7 @@ def main(args):
                                 image_id += 1
 
     # Save object info to JSON
-    with open(os.path.join(output_path, "continuous_quantity_smoothness.json"), 'w') as f:
+    with open(os.path.join(output_path, "continuous_quantity_tone.json"), 'w') as f:
         json.dump(images_info, f, indent=4)
 
     print(f"{len(images_info['shape_section'])} images generated.")
