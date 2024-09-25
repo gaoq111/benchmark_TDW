@@ -289,9 +289,9 @@ def main(args):
                                     images_info["shape_section"][-1]["question"] = f"Which object has a deeper color in the image, the {object_shape_1} or the {object_shape_2}? Answer with the letter of your choice: A. {object_shape_1} B. {object_shape_2} C. The same"
                                     images_info["shape_section"][-1]["gt_answer"] = "A" if color_name_1.split("_")[0] == "dark" else "B"
 
-                                    if color_name_1.split("_")[0] == "dark" and color_name_1.split("_")[1] == "medium":
+                                    if color_name_1.split("_")[0] == "dark" and color_name_2.split("_")[0] == "medium":
                                         images_info["shape_section"][-1]["gt_answer"] = "A"
-                                    elif color_name_1.split("_")[0] == "medium" and color_name_1.split("_")[1] == "dark":
+                                    elif color_name_1.split("_")[0] == "medium" and color_name_2.split("_")[0] == "dark":
                                         images_info["shape_section"][-1]["gt_answer"] = "B"
                                     else:
                                         images_info["shape_section"][-1]["gt_answer"] = "C"

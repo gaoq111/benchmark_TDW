@@ -26,6 +26,9 @@ def process_data(data, qstn_type):
                 # Process object info
                 for obj in item["objects_info"]:
                     obj_type = obj["type"]
+                    obj_type = obj_type.split("_")[1]
+                    obj_type = "cylinder" if obj_type == "cyl" else obj_type
+
                     obj_color = obj["color"]
                     obj_size = obj["size"]
                     obj_mtrl = obj["material"]
@@ -41,7 +44,7 @@ def process_data(data, qstn_type):
                     })
 
             # Append source image path
-            sources[suffix]["source"].append("/data/shared/sim/benchmark/evaluation/datasets/continuous_counting_tdw/images_smoothness/" + image_path)
+            sources[suffix]["source"].append("/data/shared/sim/benchmark/evaluation/datasets/continuous_counting_tone_tdw/images/" + image_path)
 
         # Create the new data entries
         for key, value in sources.items():
@@ -96,6 +99,9 @@ def process_data(data, qstn_type):
                 # Process object info
                 for obj in item["objects_info"]:
                     obj_type = obj["type"]
+                    obj_type = obj_type.split("_")[1]
+                    obj_type = "cylinder" if obj_type == "cyl" else obj_type
+                    
                     obj_color = obj["color"]
                     obj_size = obj["size"]
                     obj_mtrl = obj["material"]
@@ -111,7 +117,7 @@ def process_data(data, qstn_type):
                     })
 
             # Append source image path
-            sources[suffix]["source"].append("/data/shared/sim/benchmark/evaluation/datasets/continuous_counting_tdw/images_tone/" + image_path)
+            sources[suffix]["source"].append("/data/shared/sim/benchmark/evaluation/datasets/continuous_counting_tone_tdw/images/" + image_path)
                 # Create the new data entries
         for key, value in sources.items():
             obj_color_1 = list(value["objects"].keys())[0]
