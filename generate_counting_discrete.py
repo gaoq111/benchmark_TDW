@@ -237,61 +237,61 @@ def main(args):
 
                             obj_type += 1
 
-                    for camera_position in tqdm(camera_positions, desc="Processing camera positions", leave=False):
-                        for add_on in c.add_ons:
-                            if isinstance(add_on, ThirdPersonCamera):
-                                c.add_ons.remove(add_on)
+                        for camera_position in tqdm(camera_positions, desc="Processing camera positions", leave=False):
+                            for add_on in c.add_ons:
+                                if isinstance(add_on, ThirdPersonCamera):
+                                    c.add_ons.remove(add_on)
 
-                        camera = ThirdPersonCamera(position=camera_positions[camera_position], avatar_id=camera_position, look_at={"x": 0, "y": table_height, "z": 0}, field_of_view=55)
-                        if scene == "monkey_physics_room" and camera_position == "top" and table == "small_table_green_marble":
-                            camera = ThirdPersonCamera(position=camera_positions[camera_position], avatar_id=camera_position, look_at={"x": 0, "y": table_height, "z": 0}, field_of_view=80)
-                        elif scene == "monkey_physics_room":
-                            camera = ThirdPersonCamera(position=camera_positions[camera_position], avatar_id=camera_position, look_at={"x": 0, "y": table_height, "z": 0}, field_of_view=60)
-                        elif scene == "box_room_2018" and camera_position == "top" and table == "small_table_green_marble":
-                            camera = ThirdPersonCamera(position=camera_positions[camera_position], avatar_id=camera_position, look_at={"x": 0, "y": table_height, "z": 0}, field_of_view=75)
+                            camera = ThirdPersonCamera(position=camera_positions[camera_position], avatar_id=camera_position, look_at={"x": 0, "y": table_height, "z": 0}, field_of_view=55)
+                            if scene == "monkey_physics_room" and camera_position == "top" and table == "small_table_green_marble":
+                                camera = ThirdPersonCamera(position=camera_positions[camera_position], avatar_id=camera_position, look_at={"x": 0, "y": table_height, "z": 0}, field_of_view=80)
+                            elif scene == "monkey_physics_room":
+                                camera = ThirdPersonCamera(position=camera_positions[camera_position], avatar_id=camera_position, look_at={"x": 0, "y": table_height, "z": 0}, field_of_view=60)
+                            elif scene == "box_room_2018" and camera_position == "top" and table == "small_table_green_marble":
+                                camera = ThirdPersonCamera(position=camera_positions[camera_position], avatar_id=camera_position, look_at={"x": 0, "y": table_height, "z": 0}, field_of_view=75)
 
-                        c.add_ons.append(camera)
+                            c.add_ons.append(camera)
 
-                        # Add the ImageCapture add-on only after all objects have been placed
-                        image_folder = f"{output_path}//original"
-                        os.makedirs(image_folder, exist_ok=True)
-                        c.add_ons.append(ImageCapture(path=image_folder, avatar_ids=[camera.avatar_id], png=True))
+                            # Add the ImageCapture add-on only after all objects have been placed
+                            image_folder = f"{output_path}//original"
+                            os.makedirs(image_folder, exist_ok=True)
+                            c.add_ons.append(ImageCapture(path=image_folder, avatar_ids=[camera.avatar_id], png=True))
 
-                        # Render the image
-                        c.communicate(commands)
+                            # Render the image
+                            c.communicate(commands)
 
-                        image_info["image_path"] = f"{scene}_{camera_position}_{image_id}.png"
-                        image_info["scene"] = scene
-                        image_info["color"] = color_name
-                        image_info["camera_view"] = camera.avatar_id
-                        image_info["objects_info"] = objects_info
+                            image_info["image_path"] = f"{scene}_{camera_position}_{image_id}.png"
+                            image_info["scene"] = scene
+                            image_info["color"] = color_name
+                            image_info["camera_view"] = camera.avatar_id
+                            image_info["objects_info"] = objects_info
 
-                        images_info["shape_section"].append(copy.deepcopy(image_info))
-                        # images_info["material_section"].append(copy.deepcopy(image_info))
+                            images_info["shape_section"].append(copy.deepcopy(image_info))
+                            # images_info["material_section"].append(copy.deepcopy(image_info))
 
-                        # object_shape_1 = shape_tuple[0].split("_")[1]
-                        # object_shape_1 = "cylinder" if object_shape_1 == "cyl" else object_shape_1
-                        # object_shape_2 = shape_tuple[1].split("_")[1]
-                        # object_shape_2 = "cylinder" if object_shape_2 == "cyl" else object_shape_2
-                        # images_info["shape_section"][-1]["question"] = f"Which are more numerous in the image, {object_shape_1}s or {object_shape_2}s? Answer with the letter of your choice: A. {object_shape_1}s B. {object_shape_2}s"
-                        # images_info["shape_section"][-1]["gt_answer"] = "A" if obj_num_1 > obj_num_2 else "B"
+                            # object_shape_1 = shape_tuple[0].split("_")[1]
+                            # object_shape_1 = "cylinder" if object_shape_1 == "cyl" else object_shape_1
+                            # object_shape_2 = shape_tuple[1].split("_")[1]
+                            # object_shape_2 = "cylinder" if object_shape_2 == "cyl" else object_shape_2
+                            # images_info["shape_section"][-1]["question"] = f"Which are more numerous in the image, {object_shape_1}s or {object_shape_2}s? Answer with the letter of your choice: A. {object_shape_1}s B. {object_shape_2}s"
+                            # images_info["shape_section"][-1]["gt_answer"] = "A" if obj_num_1 > obj_num_2 else "B"
 
-                        # object_material_1 = objects_info[0]["material"].split("_")[0]
-                        # object_material_2 = objects_info[1]["material"].split("_")[0]
-                        # images_info["material_section"][-1]["question"] = f"Which material has more objects in the image, {object_material_1} or {object_material_2}? Answer with the letter of your choice: A. {object_material_1} B. {object_material_2}"
-                        # images_info["material_section"][-1]["gt_answer"] = "A" if obj_num_1 > obj_num_2 else "B"           
+                            # object_material_1 = objects_info[0]["material"].split("_")[0]
+                            # object_material_2 = objects_info[1]["material"].split("_")[0]
+                            # images_info["material_section"][-1]["question"] = f"Which material has more objects in the image, {object_material_1} or {object_material_2}? Answer with the letter of your choice: A. {object_material_1} B. {object_material_2}"
+                            # images_info["material_section"][-1]["gt_answer"] = "A" if obj_num_1 > obj_num_2 else "B"           
 
-                        # Copy image
-                        source_path = f"{image_folder}/{camera_position}/img_0000.png"
-                        destination_path = f"{output_path}/{image_info['image_path']}"
-                        shutil.copy(source_path, destination_path)
+                            # Copy image
+                            source_path = f"{image_folder}/{camera_position}/img_0000.png"
+                            destination_path = f"{output_path}/{image_info['image_path']}"
+                            shutil.copy(source_path, destination_path)
 
-                        # Reset for the next loop
-                        c.add_ons.clear() 
-                        c.communicate({"$type": "destroy_all_objects"})
-                        c.communicate(TDWUtils.create_empty_room(12, 12))
+                            # Reset for the next loop
+                            c.add_ons.clear() 
+                            c.communicate({"$type": "destroy_all_objects"})
+                            c.communicate(TDWUtils.create_empty_room(12, 12))
 
-                    image_id += 1
+                        image_id += 1
 
     # Save object info to JSON
     with open(os.path.join(output_path, "discrete_counting_info.json"), 'w') as f:
