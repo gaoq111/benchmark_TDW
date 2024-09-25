@@ -25,6 +25,9 @@ def process_data(data, qstn_type):
                 # Process object info
                 for obj in item["objects_info"]:
                     obj_type = obj["type"]
+                    obj_type = obj_type.split("_")[1]
+                    obj_type = "cylinder" if obj_type == "cyl" else obj_type
+
                     obj_color = obj["color"]
                     obj_size = obj["size"]
 
@@ -60,7 +63,7 @@ def process_data(data, qstn_type):
             else:
                 answer = choices.index("They are the same") + 1
 
-            background_map = {"tdw_room": 0, "monkey_physics_room": 1, ,"box_room_2018": 2}
+            background_map = {"tdw_room": 0, "monkey_physics_room": 1, "box_room_2018": 2}
             background = background_map.get(value["scene"], -1)
 
             new_data.append({
@@ -76,7 +79,7 @@ def process_data(data, qstn_type):
                 "answer": answer
             })
     elif qstn_type == "color":  
-       for item in data["color_section"]:  
+        for item in data["color_section"]:  
             image_path = item["image_path"]
             suffix = image_path.split('_')[-1].split('.')[0]  
 
@@ -90,6 +93,9 @@ def process_data(data, qstn_type):
                 # Process object info
                 for obj in item["objects_info"]:
                     obj_type = obj["type"]
+                    obj_type = obj_type.split("_")[1]
+                    obj_type = "cylinder" if obj_type == "cyl" else obj_type
+                    
                     obj_color = obj["color"]
                     obj_size = obj["size"]
 
@@ -125,7 +131,7 @@ def process_data(data, qstn_type):
             else:
                 answer = choices.index("They are the same") + 1
 
-            background_map = {"tdw_room": 0, "monkey_physics_room": 1, ,"box_room_2018": 2}
+            background_map = {"tdw_room": 0, "monkey_physics_room": 1, "box_room_2018": 2}
             background = background_map.get(value["scene"], -1)
 
             new_data.append({
