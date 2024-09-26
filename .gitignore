@@ -12,6 +12,9 @@ try.ipynb
 yjx_test*/
 testbed11/
 outputs/
+*/output/
+*/testbed*/
+images/
 
 # Distribution / packaging
 .Python

@@ -40,6 +40,7 @@ class AbstractTask(abc.ABC):
         self.camera = camera
         self.special_librarian = ModelLibrarian("models_special.json")
         self.core_librarian = ModelLibrarian("models_core.json")
+        self.image_ticks = 0
         
         self.init_scene()
         
@@ -68,6 +69,8 @@ class AbstractTask(abc.ABC):
                 {"$type": "set_render_quality", "render_quality": self.render_quality},
                 ]
         
+        
+        
         self.commands.append(self.c.get_add_scene(self.scene))
             
         self.step()
@@ -77,22 +80,26 @@ class AbstractTask(abc.ABC):
         pass
     
     def step(self, reset=True):
-        self.c.communicate(self.commands)
+        resp = self.c.communicate(self.commands)
         if reset:
             self.commands = []
+        self.image_ticks += 1
+        return resp
 
     
     def start_tdw_server(self, display=":4", port=1071):
-        # DISPLAY=:4 /data/shared/sim/benchmark/tdw/build/TDW.x86_64 -port 1071
-        command = f"DISPLAY={display} /data/shared/sim/benchmark/tdw/build/TDW.x86_64 -port {port}"
+        # DISPLAY=:4 /data/shared/sim/benchmark/tdw/build/TDW.x86_64 -port=1071
+        command = f"DISPLAY={display} /data/shared/sim/benchmark/tdw/build/TDW.x86_64 -port={port}"
         process = subprocess.Popen(command, shell=True)
         time.sleep(5)  # Wait for the server to start
         return process
     
     def reset_scene(self, object_ids):
         self.commands = []
-        for object_id in object_ids:
-            self.commands.append({"$type": "destroy_object", "id": object_id})
+        
+        ### Remove all objects later
+        # for object_id in object_ids:
+        #     self.commands.append({"$type": "destroy_object", "id": object_id})
         for add_on in self.c.add_ons:
             if hasattr(add_on, 'reset'):
                 add_on.reset()
@@ -101,8 +108,10 @@ class AbstractTask(abc.ABC):
                 
         
         #remove the add_ons
-        self.c.add_ons = []
+        self.c.add_ons.clear()
+        self.commands.append({"$type": "destroy_all_objects"})
         self.step()
+        self.image_ticks = 0
     
 
 class MoveObject:

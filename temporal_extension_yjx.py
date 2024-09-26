@@ -20,8 +20,6 @@ import numpy as np
 import json
 import traceback
 from tqdm import tqdm
-OFFSET = 0
-SCENE = "archviz_house"
 
 def numpy_to_python(obj):
     if isinstance(obj, np.integer):
@@ -36,7 +34,6 @@ def numpy_to_python(obj):
         return [numpy_to_python(item) for item in obj]
     else:
         return obj
-
 
 
 def filter_camera_view(motion, camera_view: List[str]):
@@ -75,25 +72,54 @@ def get_object_id(object_type:ObjectType):
     return res
 
 def get_object_shape_id(object_type:ObjectType):
-    TEMPLATE = "{model_name}_texture_scale={texture_scale}_material={material}_color={color}"
+    TEMPLATE = "{model_name}_color={color}"
     res = TEMPLATE.format(model_name=object_type.model_name,
                           texture_scale=object_type.texture_scale,
                           material=object_type.material,
                           color=format_dict_to_string(object_type.color))
     return res
+def get_object(object: ObjectType):
+    return {
+        "model_name": object.model_name,
+        "position": object.position,
+        "rotation": object.rotation,
+        "scale_factor": object.scale_factor,
+        "motion": object.motion,
+        "color": object.color_name,
+        "material": object.material,
+        "texture_scale": object.texture_scale
+    }
 
-class TemporalPositioning(AbstractTask):
+def add_index_label(img, index):
+    # Create a copy of the image to avoid modifying the original
+    labeled_img = img.copy()
+    
+    # Parameters for the text
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    org = (10, 30)  # Upper left corner
+    font_scale = 1
+    color = (0, 255, 0)  # Green color
+    thickness = 2
+    
+    # Add a black background to make text more visible
+    cv2.rectangle(labeled_img, (5, 5), (50, 40), (0, 0, 0), -1)
+    
+    # Add the text
+    cv2.putText(labeled_img, str(index), org, font, font_scale, color, thickness, cv2.LINE_AA)
+    
+    return labeled_img
+
+class TemporalExtension(AbstractTask):
     def __init__(self, output_path:str = None,
-                 port:int = 1071,
+                 port:int = 1072,
                  display:str = ":4",
                  scene:str = "empty_scene",
                  screen_size:Tuple[int, int] = (1920, 1080),
                  physics:bool = False, # enable physics or not
                  render_quality:int = 10,
-                 name:str = "temporal_positioning",
+                 name:str = "temporal_extension",
                  library:str = "models_core.json",
                  camera: List[str] = AVAILABLE_CAMERA_POS.keys()):
-        
         
         super().__init__(output_path=output_path, port=port, 
                          display=display, scene=scene, 
@@ -110,7 +136,11 @@ class TemporalPositioning(AbstractTask):
             fixed_obj_list: List[ObjectType] = None,
             seed: int = 12):
         
-        
+        # Add Scene
+        self.scene = scene
+        self.commands.append(self.c.get_add_scene(scene))
+
+
         self.object_list = main_obj_list + fixed_obj_list
         
 
@@ -121,10 +151,6 @@ class TemporalPositioning(AbstractTask):
         self.main_object_shaple_ids = [get_object_id(obj) for obj in main_obj_list]
         self.fixed_object_shape_ids = [get_object_id(obj) for obj in fixed_obj_list]
         
-        # Add Scene
-        self.scene = scene
-        self.commands.append(self.c.get_add_scene(scene))
-
         try:
             move_object_dict = {}
             
@@ -138,22 +164,18 @@ class TemporalPositioning(AbstractTask):
                     obj.library = "models_core.json"
                 
                 obj.model_record = ModelLibrarian(obj.library).get_record(obj.model_name)
-
                 object_id = self.c.get_unique_id()
                 obj.object_id = object_id
                 print(f"Object name: {obj.model_name}, with id = {obj.object_id}")
                 
-
+                # attention: here the gravity should be turned off                
                 self.commands.extend(self.c.get_add_physics_object(model_name=obj.model_name,
-                                                                library=obj.library,
-                                                                gravity=False,
-                                                                position=obj.position,
-                                                                rotation=obj.rotation,
-                                                                scale_factor=obj.scale_factor if obj.scale_factor is not None else {"x": 1, "y": 1, "z": 1},
-                                                                object_id=obj.object_id))
-                
-                
-                
+                                                library=obj.library,
+                                                gravity=False,
+                                                position=obj.position,
+                                                rotation=obj.rotation,
+                                                scale_factor=obj.scale_factor if obj.scale_factor is not None else {"x": 1, "y": 1, "z": 1},
+                                                object_id=obj.object_id))
                 if obj.material is not None:
                     print(obj.material)
                     self.commands.append(self.c.get_add_material(material_name=obj.material))
@@ -163,17 +185,10 @@ class TemporalPositioning(AbstractTask):
                                     "color": obj.color,
                                     "id": obj.object_id})
                 
-                # if obj.texture_scale is not None:
-                #     for sub_object in obj.model_record.substructure:
-                #         self.commands.append({"$type": "set_texture_scale",
-                #                               "object_name": sub_object["name"],
-                #                               "id": obj.object_id,
-                #                               "scale": {"x": obj.texture_scale, "y": obj.texture_scale}})
-                
+
                 move_object_dict[obj.object_id] = MoveObject(obj)
                 
                 print(f"Object {obj.model_name} = {obj.object_id} added")
-            
             
             main_obj = main_obj_list[0]
             other_objs = fixed_obj_list
@@ -192,137 +207,98 @@ class TemporalPositioning(AbstractTask):
             capture = ImageCapture(avatar_ids=self.camera, path=os.path.join(self.output_path, self.name, self.expr_id), png=True)
             self.c.add_ons.append(capture)
             
-            MOVE_STEP = 10
-            PIC_NUM = 4 # the number of pictures serving as the query
+            MOVE_STEP = 6
             
-            for obj in self.object_list:
-                if get_object_shape_id(obj) not in self.fixed_object_shape_ids:
-                    print(f"Object {obj.model_name} = {obj.object_id} is moving {obj.motion}, {MOVE_STEP} steps")
-                    for i in tqdm(range(MOVE_STEP), desc=f"Moving object {obj.model_name} = {obj.object_id}"):
-                        move_object_dict[obj.object_id].execute_movement(self.c, obj.motion, magnitude=0.15)
-                    break
+            move_dict = {}
+            
+            #only works for two objects
+            first_move_obj = self.object_list[0]
+            second_move_obj = self.object_list[1]
+            [start1, start2, end1, end2] = np.sort(np.random.choice(MOVE_STEP, size=4, replace=False)) #[start1, start2, end1, end2]
+            move_dict[first_move_obj.object_id] = range(start1, end1 + 1)
+            move_dict[second_move_obj.object_id] = range(start2, end2 + 1)
+            
+            # record who starts moving first and who stops moving first
+
+            print(f"Move Step: {MOVE_STEP}")
+            for i in range(MOVE_STEP):
+                commands = []
+                for obj in self.object_list:
+                    if obj.object_id in move_dict:
+                        if i in move_dict[obj.object_id]:
+                            magnitude = 1.0 / len(move_dict[obj.object_id])
+                            move_commands = move_object_dict[obj.object_id].move_and_get_commands_only(movement = obj.motion, magnitude=magnitude)
+                            commands.extend(move_commands)
+                print(f"Step {i} completed")
+                self.c.communicate(commands)
             # step1: randomly pick a range,which has length of 4, from (0, 10)
-            random_start = np.random.randint(0, MOVE_STEP - PIC_NUM)
-            query_image_index = []
-            other_image_index = []
-            for i in range(PIC_NUM):
-                query_image_index.append(random_start + i)
-            
-            GEN_NUM = 2 # this means we will include two pics that not belong to those steps
-            OTHER_NUM = PIC_NUM - GEN_NUM - 1 # this means we will include one pic that belongs to those steps
-            
-            for i in range(OTHER_NUM):
-                while True:
-                    index = np.random.randint(0, MOVE_STEP)
-                    if index < np.min(query_image_index) - 1 or index > np.max(query_image_index) + 1:
-                        other_image_index.append(index)
-                        break
-            query_image_index.sort()
-            
-            gen_commands = ["move_object", "set_color", "change_scale", "rotate_object"]
 
-            # we need to know how many imgs have been generated
-            before_gen = len(os.listdir(os.path.join(self.output_path, self.name, self.expr_id, self.camera[0])))
+            query_image_index = list(range(MOVE_STEP))
             
-            print(f"Before gen: {before_gen}, the latters are generated for candidates")
-            
-            for i in range(GEN_NUM):
-                choice = np.random.choice(gen_commands)
-                if choice == "move_object":
-                    print("move_object")
-                    MOVE_STEP = 2
-                    for obj in other_objs:
-                        motion = np.random.choice(AVAILABLE_MOTION)
-                        print(f"GENERATE: Object {obj.model_name} = {obj.object_id} is moving {motion}, {MOVE_STEP} steps")
-                        for i in range(MOVE_STEP):
-                            move_object_dict[obj.object_id].execute_movement(self.c, motion, magnitude=0.3)
-                            
-                elif choice == "set_color":
-                    print("set_color")
-                    for obj in self.object_list:
-                        color = np.random.choice(list(AVAILABLE_COLOR.keys()))
-                        self.c.communicate({"$type": "set_color",
-                                            "color": AVAILABLE_COLOR[color],
-                                            "id": obj.object_id})
-                elif choice == "change_scale":
-                    print("change_scale")
-                    for obj in self.object_list:
-                        scale = np.random.uniform(0.1, 2)
-                        scale_factor = {"x": scale, "y": scale, "z": scale}
-                        self.c.communicate({"$type": "scale_object",
-                                            "scale_factor": scale_factor,
-                                            "id": obj.object_id})
-                elif choice == "rotate_object":
-                    print("rotate_object")
-                    for obj in self.object_list:
-                        rotation = {"x": 0, "y": np.random.uniform(0, 360), "z": 0}
-                        self.c.communicate({"$type": "rotate_object_to",
-                                            "rotation": rotation,
-                                            "id": obj.object_id})
-                        
-                elif choice == "change_scene":
-                    print("change_scene")
-                    self.c.communicate(self.c.get_add_scene(np.random.choice(AVAILABLE_SCENE)))
-                    
 
-            
             output_res_cam = {
                 cam: {
                 } for cam in self.camera
             }
-            
-            gen_img_index = [before_gen + i for i in range(GEN_NUM)]
-            
- 
+
 
             for cam in self.camera:
                 output_path_dict = {
                     "query": [],
-                    "other": [],
-                    "gen": []
                 }
                 for i in query_image_index:
                     output_path_dict["query"].append(os.path.join(self.output_path, self.name, self.expr_id, cam, f"img_{i:04d}.png"))
-                for i in other_image_index:
-                    output_path_dict["other"].append(os.path.join(self.output_path, self.name, self.expr_id, cam, f"img_{i:04d}.png"))
-                for i in gen_img_index:
-                    output_path_dict["gen"].append(os.path.join(self.output_path, self.name, self.expr_id, cam, f"img_{i:04d}.png"))
-
-                output_res_cam[cam]["query"] = output_path_dict["query"][1:] # this contains 3 imgs
-                candidates = [output_path_dict["query"][0]] # 1, this is the ans
-                candidates.extend(output_path_dict["gen"]) # 2
-                candidates.extend(output_path_dict["other"]) # 1
+                    
+                output_res_cam[cam]["query"] = output_path_dict["query"] #
                 
-                # shuffle candidates
-                index = np.arange(len(candidates))
-                np.random.shuffle(index)
-                answer = [i for i, t in enumerate(index) if t == 0][0]
-                candidates = [candidates[i] for i in index]
-                output_res_cam[cam]["candidates"] = candidates
-                output_res_cam[cam]["answer"] = answer + 1
-                output_res_cam[cam]["camera_direction"] = cam
-                output_res_cam[cam]["main_obj"] = {
-                    "model_name": main_obj.model_name,
-                    "position": main_obj.position,
-                    "rotation": main_obj.rotation,
-                    "scale_factor": main_obj.scale_factor,
-                    "motion": main_obj.motion,
-                    "color": main_obj.color_name,
-                    "material": main_obj.material,
-                    "texture_scale": main_obj.texture_scale
+                
+                output_res_cam[cam]["object_move_first"] = {
+                    "move_time": start1,
+                    "end_time": end1,
+                    "model_name": first_move_obj.model_name,
+                    "position": first_move_obj.position,
+                    "rotation": first_move_obj.rotation,
+                    "scale_factor": first_move_obj.scale_factor,
+                    "motion": first_move_obj.motion,
+                    "color": first_move_obj.color_name,
+                    "material": first_move_obj.material,
+                    "texture_scale": first_move_obj.texture_scale
                 }
-                output_res_cam[cam]["other_objs"] = [
-                    {
-                        "model_name": obj.model_name,
-                        "position": obj.position,
-                        "rotation": obj.rotation,
-                        "scale_factor": obj.scale_factor,
-                        "motion": obj.motion,
-                        "color": obj.color_name,
-                        "material": obj.material,
-                        "texture_scale": obj.texture_scale
-                    } for obj in other_objs
-                ]
+                output_res_cam[cam]["object_move_second"] = {
+                    "move_time": start2,
+                    "end_time": end2,
+                    "model_name": second_move_obj.model_name,
+                    "position": second_move_obj.position,
+                    "rotation": second_move_obj.rotation,
+                    "scale_factor": second_move_obj.scale_factor,
+                    "motion": second_move_obj.motion,
+                    "color": second_move_obj.color_name,
+                    "material": second_move_obj.material,
+                    "texture_scale": second_move_obj.texture_scale
+                }
+                output_res_cam[cam]["camera_direction"] = cam
+                # output_res_cam[cam]["main_obj"] = {
+                #     "model_name": main_obj.model_name,
+                #     "position": main_obj.position,
+                #     "rotation": main_obj.rotation,
+                #     "scale_factor": main_obj.scale_factor,
+                #     "motion": main_obj.motion,
+                #     "color": main_obj.color_name,
+                #     "material": main_obj.material,
+                #     "texture_scale": main_obj.texture_scale
+                # }
+                # output_res_cam[cam]["other_objs"] = [
+                #     {
+                #         "model_name": obj.model_name,
+                #         "position": obj.position,
+                #         "rotation": obj.rotation,
+                #         "scale_factor": obj.scale_factor,
+                #         "motion": obj.motion,
+                #         "color": obj.color_name,
+                #         "material": obj.material,
+                #         "texture_scale": obj.texture_scale
+                #     } for obj in other_objs
+                # ]
                 output_res_cam[cam]["scene"] = self.scene
 
             # write the item in output_res_cam into jsonl
@@ -337,58 +313,46 @@ class TemporalPositioning(AbstractTask):
             # make the answer img with boxed with red line
 
             for cam in self.camera:
-                # Read and resize query images (3 images)
                 query_imgs = [cv2.imread(img) for img in output_res_cam[cam]["query"]]
-                query_imgs = [cv2.resize(img, (224, 224)) for img in query_imgs]
                 
-                # Read and resize candidate images (4 images)
-                candidate_imgs = [cv2.imread(img) for img in output_res_cam[cam]["candidates"]]
-                candidate_imgs = [cv2.resize(img, (224, 224)) for img in candidate_imgs]
-                
-                # Add red border to the answer image
-                answer_index = output_res_cam[cam]["answer"] - 1
-                border_size = 5
-                target_img = None
-                for i in range(len(candidate_imgs)):
-                    if i == answer_index:
-                        target_img = candidate_imgs[i]
-                        candidate_imgs[i] = cv2.copyMakeBorder(candidate_imgs[i], border_size, border_size, border_size, border_size, cv2.BORDER_CONSTANT, value=[0, 0, 255])
-                    else:
-                        candidate_imgs[i] = cv2.copyMakeBorder(candidate_imgs[i], border_size, border_size, border_size, border_size, cv2.BORDER_CONSTANT, value=[0, 0, 0])
-
-                # Ensure all images are the same size
-                target_size = (224, 224)
-                query_imgs = [target_img] + query_imgs
-                query_imgs = [cv2.resize(img, target_size) for img in query_imgs]
-                candidate_imgs = [cv2.resize(img, target_size) for img in candidate_imgs]
+                # Add index labels to images
+                labeled_query_imgs = [add_index_label(img, i) for i, img in enumerate(query_imgs)]
                 
                 # Concatenate query images horizontally
-                query_row = np.hstack(query_imgs)
-                
-                # Add a blank image to match the width of candidate row
-                # blank_img = np.zeros((224, 224, 3), dtype=np.uint8)
-                # query_row = np.hstack([query_row, blank_img])
-                
-                # Concatenate candidate images horizontally
-                candidate_row = np.hstack(candidate_imgs)
-                
-                # Concatenate both rows vertically
-                final_image = np.vstack([query_row, candidate_row])
+                ROW_SIZE = 3
+                rows = [
+                    np.hstack(labeled_query_imgs[i*ROW_SIZE:(i+1)*ROW_SIZE]) for i in range(len(labeled_query_imgs) // ROW_SIZE)
+                ]
+                final_image = np.vstack(rows)
                 
                 # Save the final image
                 cv2.imwrite(os.path.join(self.output_path, self.name, self.expr_id, cam, "sample.png"), final_image)
                 
+                # Create MP4 video
+                output_video_path = os.path.join(self.output_path, self.name, self.expr_id, cam, "sample_video.avi")
+                frame_size = (512, 512)  # Assuming each image is 224x224
+                fps = 2  # You can adjust this value to change the speed of the video
+    
+                fourcc = cv2.VideoWriter_fourcc(*'MJPG')  # Use MJPG codec
+                out = cv2.VideoWriter(output_video_path, fourcc, fps, frame_size)
+                for img in labeled_query_imgs:
+                    out.write(img)
+                
+                
+                out.release()
+                
+                print(f"Video saved to {output_video_path}")
         except Exception as e:
             traceback.print_exc()   
         finally:
             print("terminating the controller")
             self.c.communicate({"$type": "terminate"})
 
-@hydra.main(config_path="configs", config_name="temporal_positioning.yaml", version_base=None)
+@hydra.main(config_path="configs", config_name="temporal_extension.yaml", version_base=None)
 def main(cfg: DictConfig):
 
     
-    target_size = 100000
+    target_size = 7
     
     ideal_size = len(AVAILABLE_CAMERA_POS) * len(AVAILABLE_MOTION) * len(AVAILABLE_OBJECT) * len(AVAILABLE_COLOR)**2
     
@@ -396,35 +360,44 @@ def main(cfg: DictConfig):
     
     gen_id_set = set()
     
-    x_range = [-0.3, 0.3]
+    x_range = [-0.1, 0.1]
     y_range = [0, 0]
-    z_range = [-0.3, 0.3]
+    z_range = [-0.1, 0.1]
     
     rotation_range = [-90, 90]
     pbar = tqdm(total=target_size)
     seed = 0
-
+    
     material_pairs = list(itertools.permutations(SELECTED_MATERIALS, 2))
     random.shuffle(material_pairs)
+
     texture_pairs = list(itertools.permutations(SELECTED_TEXTURES, 2))
     random.shuffle(texture_pairs)
+
     size_pairs = list(itertools.permutations(SELECTED_SIZES, 2))
     random.shuffle(size_pairs)
+
+    object_pairs = list(itertools.permutations(SELECTED_OBJECTS, 2))
+    random.shuffle(object_pairs)
+
+    color_pairs = list(itertools.permutations(SELECTED_COLORS, 2))
+    random.shuffle(color_pairs)
+
     scenes = SELECTED_SCENES
     random.shuffle(scenes)
 
-    for scene in scenes[:4]:
+    for scene in scenes:
         for material1, material2  in material_pairs[:2]:
             for texture1, texture2 in texture_pairs[:2]:
                 for size1, size2 in size_pairs[:2]:
-                    for object in SELECTED_OBJECTS:
-                        for color in SELECTED_COLORS:
+                    for object1, object2 in object_pairs[:6]: 
+                        for color1, color2 in color_pairs[:6]:
                             task = None
-                            task = TemporalPositioning(**cfg)
+                            task = TemporalExtension(**cfg)
                             np.random.seed(seed)
                             seed += 1
                             main_obj = ObjectType(
-                                model_name=object,
+                                model_name=object1,
                                 library="models_core.json",
                                 position=get_position(scene, x_range, y_range, z_range),
                                 rotation={"x": 0, "y": np.random.uniform(rotation_range[0], rotation_range[1]), "z": 0},
@@ -433,19 +406,19 @@ def main(cfg: DictConfig):
                                 object_id=None,
                                 material=material1,
                                 motion=np.random.choice(AVAILABLE_MOTION),
-                                color=color
+                                color=color1
                             )
                             fixed_obj = ObjectType(
-                                model_name=np.random.choice(AVAILABLE_OBJECT),
+                                model_name=object2,
                                 library="models_core.json",
-                                position=get_position(scene, x_range, y_range, z_range),
+                                position=get_position_with_offset(scene, x_range, y_range, z_range, 0.2),
                                 rotation={"x": 0, "y": np.random.uniform(rotation_range[0], rotation_range[1]), "z": 0},
                                 scale_factor=size2,
                                 texture_scale=texture2,
                                 object_id=None,
                                 material=material2,
-                                motion=np.random.choice(AVAILABLE_MOTION),
-                                color=np.random.choice(list(AVAILABLE_COLOR.keys()))
+                                motion=np.random.choice([motion for motion in AVAILABLE_MOTION if motion != main_obj.motion]),
+                                color=color2
                             )
                             
                             main_obj_shape_id = get_object_shape_id(main_obj)
@@ -469,7 +442,6 @@ def main(cfg: DictConfig):
                                 pbar.update(1)
                             
                             del task
-    
 
 if __name__ == "__main__":
     main()

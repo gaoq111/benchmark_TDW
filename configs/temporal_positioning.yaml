@@ -1,5 +1,5 @@
 name: temporal_positioning
-output_path: yjx_test1
+output_path: yjx_test_2
 port: 1071
 display: :4
 screen_size: [512, 512]
