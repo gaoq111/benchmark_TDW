@@ -287,10 +287,10 @@ def main(args):
                             destination_path = f"{output_path}/{image_info['image_path']}"
                             shutil.copy(source_path, destination_path)
 
-                            # Reset for the next loop
-                            c.add_ons.clear() 
-                            c.communicate({"$type": "destroy_all_objects"})
-                            c.communicate(TDWUtils.create_empty_room(12, 12))
+                        # Reset for the next loop
+                        c.add_ons.clear() 
+                        c.communicate({"$type": "destroy_all_objects"})
+                        c.communicate(TDWUtils.create_empty_room(12, 12))
 
                         image_id += 1
 

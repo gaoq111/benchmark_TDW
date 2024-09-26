@@ -41,7 +41,7 @@ def process_data(data, qstn_type):
                     })
 
             # Append source image path
-            sources[suffix]["source"].append("/data/shared/sim/benchmark/evaluation/datasets/continuous_counting_tdw/images_smoothness/" + image_path)
+            sources[suffix]["source"].append("/data/shared/sim/benchmark/evaluation/datasets/continuous_counting_smoothness_tdw/images/" + image_path)
 
         # Create the new data entries
         for key, value in sources.items():
@@ -111,7 +111,7 @@ def process_data(data, qstn_type):
                     })
 
             # Append source image path
-            sources[suffix]["source"].append("/data/shared/sim/benchmark/evaluation/datasets/continuous_counting_tdw/images_smoothness/" + image_path)
+            sources[suffix]["source"].append("/data/shared/sim/benchmark/evaluation/datasets/continuous_counting_smoothness_tdw/images/" + image_path)
                 # Create the new data entries
         for key, value in sources.items():
             obj_color_1 = list(value["objects"].keys())[0]
