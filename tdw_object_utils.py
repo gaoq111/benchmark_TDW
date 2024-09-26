@@ -12,8 +12,14 @@ from tdw.add_ons.third_person_camera import ThirdPersonCamera
 import numpy as np
 
 SELECTED_SCENES = ["box_room_2018", "empty_scene", "monkey_physics_room", "ruin", "suburb_scene_2018"]
-SELECTED_MATERIALS = ["concrete_raw_damaged", "leather_bull", "iron_rusty", "plastic_base", "wood_american_chestnut"]
-SELECTED_SIZES = [0.2, 0.4, 0.7]
+SELECTED_MATERIALS = ["concrete_raw_damaged", "iron_rusty", "plastic_base", "wood_american_chestnut"] #"leather_bull",
+SELECTED_OBJECTS = [
+    "prim_cone",
+    "prim_sphere",
+    "prim_cube",
+    "prim_cyl",
+]
+SELECTED_SIZES = [0.1, 0.2, 0.4]
 SELECTED_TEXTURES = [0.1, 0.5, 1.0]
 SELECTED_COLORS = {
     "red": {
@@ -50,6 +56,9 @@ SELECTED_COLORS = {
         "r": 1, "g": 1, "b": 1, "a": 0.5
     },
 }
+
+def array_to_transform(array):
+    return {"x": array[0], "y": array[1], "z": array[2]}
 
 def numpy_to_python(obj):
     if isinstance(obj, np.integer):
@@ -92,9 +101,9 @@ def get_camera_views(motion, camera_view: List[str]):
     else:
         return camera_view
 
-def add_cameras(c, camera_ids, output_pth):
+def add_cameras(c, camera_ids, output_pth, scene):
     for cam in camera_ids:
-        c.add_ons.append(get_cameras(cam))
+        c.add_ons.append(get_cameras(cam, scene))
     capture = ImageCapture(avatar_ids=camera_ids, path=output_pth, png=True)
     c.add_ons.append(capture)
 
@@ -133,4 +142,11 @@ def get_position(scene: str, x_range: tuple, y_range: tuple, z_range: tuple):
         config = yaml.safe_load(file)[scene]['object']['center']
     x, y, z = config
     position={"x": x + np.random.uniform(x_range[0], x_range[1]), "y": y +np.random.uniform(y_range[0], y_range[1]), "z": z + np.random.uniform(z_range[0], z_range[1])}
+    return position
+
+def get_position_with_offset(scene: str, x_range: tuple, y_range: tuple, z_range: tuple, offset):
+    with open('/data/shared/sim/benchmark/benchmark_TDW/scene_settings.yaml', 'r') as file:
+        config = yaml.safe_load(file)[scene]['object']['center']
+    x, y, z = config
+    position={"x": x + np.random.uniform(x_range[0], x_range[1]) + offset, "y": y +np.random.uniform(y_range[0], y_range[1]), "z": z + np.random.uniform(z_range[0], z_range[1]) + offset}
     return position

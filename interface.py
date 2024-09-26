@@ -93,7 +93,10 @@ class ObjectType:
         self.material = material
         self.texture_scale = texture_scale
         self.color = AVAILABLE_COLOR[color]
+        self.color_name = color
         self.motion = motion
+        
+        
     def __str__(self):
         return f"ObjectType(model_name={self.model_name}, library={self.library}, position={self.position}, rotation={self.rotation}, scale_factor={self.scale_factor}, object_id={self.object_id})"
     
@@ -112,8 +115,24 @@ class ObjectType:
             "texture_scale": self.texture_scale,
             "model_record": self.model_record,
             "color": self.color,
+            "color_name": self.color_name,
             "motion": self.motion
         }
+    
+    def get_attributes(self):
+        return {
+            "model_name": self.model_name,
+            "position": self.position,
+            "rotation": self.rotation,
+            "color": self.color_name,
+            "size": self.scale_factor,
+            "material": self.material,
+            "texture": self.texture_scale,
+        }
+
+    def get_size(self):
+        scale_avg = (float(self.scale_factor["x"]) + float(self.scale_factor["y"]) + float(self.scale_factor["z"])) / 3
+        return scale_avg
 
 
 

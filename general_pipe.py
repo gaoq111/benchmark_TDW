@@ -22,12 +22,12 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_OUTPUT_PATH = os.path.join(base_dir, "image_capture")
 
 # Initiate a tdw server:
-# DISPLAY=:4 /data/shared/sim/benchmark/tdw/build/TDW.x86_64 -port 1071
+# DISPLAY=:4 /data/shared/sim/benchmark/tdw/build/TDW.x86_64 -port=1071
 # The server might exit when there are errors in executing the commands 
 # "y" is the vertical axis in the setting
 
 def start_tdw_server(display=":4", port=1071):
-    command = f"DISPLAY={display} /data/shared/sim/benchmark/tdw/build/TDW.x86_64 -port {port}"
+    command = f"DISPLAY={display} /data/shared/sim/benchmark/tdw/build/TDW.x86_64 -port={port}"
     process = subprocess.Popen(command, shell=True)
     time.sleep(5)  # Wait for the server to start
     return process
@@ -162,7 +162,7 @@ def main(args):
     # Terminate the server after the job is done
     c.communicate({"$type": "terminate"})
 
-# DISPLAY=:4 /data/shared/sim/benchmark/tdw/build/TDW.x86_64 -port 1071
+# DISPLAY=:4 /data/shared/sim/benchmark/tdw/build/TDW.x86_64 -port=1071
 # python tryout_kevin.py --output "/data/shared/sim/benchmark/tdw/image_capture/trajectory_demo" --cameras top --scene empty_scene --name circle --action circle_1
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
