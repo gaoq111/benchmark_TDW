@@ -1,6 +1,6 @@
 name: temporal_extension
-output_path: yjx_test_extension
-port: 1071
+output_path: temporal_extension_yjx_01_05_with_light
+port: 1089
 display: :4
 screen_size: [512, 512]
 physics: false

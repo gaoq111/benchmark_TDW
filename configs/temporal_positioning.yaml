@@ -1,6 +1,6 @@
 name: temporal_positioning
-output_path: yjx_test_2
-port: 1071
+output_path: temporal_positioning_03_25_with_light
+port: 1077
 display: :4
 screen_size: [512, 512]
 physics: false

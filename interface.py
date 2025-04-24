@@ -128,6 +128,7 @@ class ObjectType:
             "size": self.scale_factor,
             "material": self.material,
             "texture": self.texture_scale,
+            "motion": self.motion
         }
 
     def get_size(self):

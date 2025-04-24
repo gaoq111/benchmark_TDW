@@ -44,7 +44,7 @@ class ObjectTask(AbstractTask):
                 raise ValueError(f"Model {obj_type} not found in any library.")
 
     def generate_regular_object(self, obj_type, position={"x": 0, "y": 0.2, "z": 0}, scale=0.5, color="red",rotation={"x": 0, "y": 0, "z": 0}, 
-                                material=None, texture_scale=1, motion="static"):
+                                material=None, texture_scale=1, motion="static", mass=2, bounciness=0.7):
         object_id = self.c.get_unique_id()
         library, model_record = self.get_model_record(obj_type)
         
@@ -58,6 +58,7 @@ class ObjectTask(AbstractTask):
                  material=material,
                  texture_scale=texture_scale,
                  color=color,
+                 
                  motion=motion)
         
         #print(f"Object name: {object_info.model_name}, with id = {object_info.object_id}")
@@ -65,11 +66,17 @@ class ObjectTask(AbstractTask):
         # attention: here the gravity should be turned off
         self.commands.extend(self.c.get_add_physics_object(model_name=object_info.model_name,
                                                         library=object_info.library,
-                                                        gravity=True,
+                                                        gravity=False,
+                                                        # default_physics_values=False, # weird volume error
                                                         position=object_info.position,
                                                         rotation=object_info.rotation,
                                                         scale_factor=object_info.scale_factor,
-                                                        object_id=object_info.object_id))
+                                                        object_id=object_info.object_id,
+                                                        dynamic_friction=0.4,
+                                                        static_friction=0.4,
+                                                        mass = mass,
+                                                        bounciness = bounciness,
+                                                        ))
         
         
         
@@ -92,32 +99,35 @@ class ObjectTask(AbstractTask):
     
     
     #Now clearly define the color, shape, material, texture, size pairs because these may be further customized depending on the task
-    # def generate_color_pair(self, choices=SELECTED_COLORS):
-    #     color_pairs = list(itertools.permutations(choices, self.num_objects))
-    #     random.shuffle(color_pairs)
-    #     return color_pairs
+    def generate_color_pair(self, choices=SELECTED_COLORS):
+        color_pairs = list(itertools.permutations(choices, self.num_objects))
+        random.shuffle(color_pairs)
+        return color_pairs
     
-    # def generate_shape_pair(self, choices=SELECTED_OBJECTS, num=None):
-    #     if num is None:
-    #         num = self.num_objects
-    #     shape_pairs = list(itertools.permutations(choices, num))
-    #     random.shuffle(shape_pairs)
-    #     return shape_pairs
+    def generate_shape_pair(self, choices=SELECTED_OBJECTS, num=None):
+        if num is None:
+            num = self.num_objects
+        shape_pairs = list(itertools.permutations(choices, num))
+        random.shuffle(shape_pairs)
+        return shape_pairs
     
-    # def generate_material_pair(self, choices=SELECTED_MATERIALS):
-    #     material_pairs = list(itertools.permutations(choices, self.num_objects))
-    #     random.shuffle(material_pairs)
-    #     return material_pairs
+    def generate_material_pair(self, choices=SELECTED_MATERIALS):
+        material_pairs = list(itertools.permutations(choices, self.num_objects))
+        random.shuffle(material_pairs)
+        return material_pairs
     
-    # def generate_texture_pair(self, choices=SELECTED_TEXTURES):
-    #     texture_pairs = list(itertools.permutations(choices, self.num_objects))
-    #     random.shuffle(texture_pairs)
-    #     return texture_pairs
+    def generate_texture_pair(self, choices=SELECTED_TEXTURES):
+        texture_pairs = list(itertools.permutations(choices, self.num_objects))
+        random.shuffle(texture_pairs)
+        return texture_pairs
 
-    # def generate_size_pair(self, choices=SELECTED_SIZES):
-    #     size_pairs = list(itertools.permutations(choices, self.num_objects))
-    #     random.shuffle(size_pairs)
-    #     return size_pairs
+    def generate_size_pair(self, choices=SELECTED_SIZES, product=False):
+        if product:
+            size_pairs = list(itertools.product(choices, choices))
+        else:
+            size_pairs = list(itertools.permutations(choices, self.num_objects))
+        random.shuffle(size_pairs)
+        return size_pairs
     
     def generate_attr_pair(self, choices, num=None):
         if num is None:

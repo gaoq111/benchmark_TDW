@@ -160,15 +160,19 @@ def main(args):
             congfig = yaml.safe_load(file)
 
         # Define scenes
-        scenes = ["empty_scene", "monkey_physics_room", "box_room_2018"]
+        scenes = ["empty_scene", "monkey_physics_room", "box_room_2018", "archviz_house", "ruin", "suburb_scene_2018"]
 
         # Define materials
-        # object_materials = ["limestone_white", "glass_chopped_strands", "sand_covered_stone_ground"]
+        object_materials = ["limestone_white", "glass_chopped_strands", "sand_covered_stone_ground"]
 
         # Define objects
         objects_set = ['prim_cube', 'prim_sphere']
+
         # number of objects
-        n = 2
+        num_obj = [2, 3, 4]
+
+        # Number of data per scene
+        num_data = 20
 
         # Define Library
         lib = "models_special.json"
@@ -180,7 +184,7 @@ def main(args):
         size = 0.25
 
         # Define Speeds
-        speeds = [1,2]
+        speeds = [1, 2, 3]
 
         # Initialize image info
         infos = []
@@ -190,164 +194,162 @@ def main(args):
         # c.add_ons.append(collision_manager)
 
         count = 0
-
         for scene in tqdm(scenes, desc="Processing scenes"):
             # interior_lighting.reset(hdri_skybox="old_apartments_walkway_4k", aperture=8, focus_distance=2.5, ambient_occlusion_intensity=0.125, ambient_occlusion_thickness_modifier=3.5, shadow_strength=1)
-            for camera_id in cameras:
-                for _ in range(5):
-                    # positions = []
-                    output_path = args.output_path
+            for camera_id in tqdm(cameras, leave=False):
+                for n in tqdm(num_obj, leave=False):
+                    for material in tqdm(object_materials, leave=False):
+                        for _ in tqdm(range(num_data), leave=False):
+                            output_path = args.output_path
 
-                    # Camera and vision boundary setting
-                    camera_config = congfig[scene]['camera']
-                    vision_boundary = congfig[scene]['vision_boundary']
+                            # Camera and vision boundary setting
+                            camera_config = congfig[scene]['camera']
+                            vision_boundary = congfig[scene]['vision_boundary']
 
-                    # generate n coordinates, objects, and colors
-                    coordinates = generate_coordinates(vision_boundary, size, n=n)
-                    # positions.extend(coordinates)
+                            # generate n coordinates, objects, and colors
+                            coordinates = generate_coordinates(vision_boundary, size, n=n)
 
-                    objects = generate_objects(objects_set, n=n)
-                    colors = generate_colors(COLORS, n=n)
-                    
-                    # common setting across all speeds
-                    scenario_info = {}
-                    scenario_info["scene"] = scene
-                    scenario_info["camera_view"] = camera_id
+                            objects = generate_objects(objects_set, n=n)
+                            colors = generate_colors(COLORS, n=n)
 
-                    # all image infos in 1 scenario (multiple speeds)
-                    image_infos = {}
+                            # all image infos in 1 scenario (multiple speeds)
+                            image_infos = {}
 
-                    for speed in speeds:
-                        image_info = {}
-                        c.add_ons.clear() 
-                        c.communicate({"$type": "destroy_all_objects"})
-                        # c.communicate(TDWUtils.create_empty_room(12, 12))
-                        # random.seed(speed)
-                        objects_info = []
-                        # General rendering configurations
-                        commands = [{"$type": "set_screen_size", "width": args.screen_size[0], "height": args.screen_size[1]},
-                                    {"$type": "set_render_quality", "render_quality": args.render_quality}]
-                        # Initialize scene
-                        commands.append(c.get_add_scene(scene))
-                        # get the object and set location
-                        model_records = []
-                        object_ids = []
-                        for i in range(n):
-                            object_id = c.get_unique_id()
-                            object_ids.append(object_id)
-                            model_record = ModelLibrarian(lib).get_record(objects[i])
-                            model_records.append(model_record)
+                            for speed in speeds:
+                                image_info = {}
+                                image_info["speed"] = speed
+                                image_info["scene"] = scene
+                                image_info["camera_view"] = camera_id
 
-                            x, y, z = coordinates[i]
-                            commands.extend(c.get_add_physics_object(model_name=objects[i],
-                                                                    library=lib,
-                                                                    position={"x": x,  "y": y, "z": z},
-                                                                    scale_factor={"x": size, "y": size, "z": size},
-                                                                    gravity=False,
-                                                                    default_physics_values=False,
-                                                                    object_id=object_id))
+                                c.add_ons.clear() 
+                                c.communicate({"$type": "destroy_all_objects"})
+                                objects_info = []
+                                # General rendering configurations
+                                commands = [{"$type": "set_screen_size", "width": args.screen_size[0], "height": args.screen_size[1]},
+                                            {"$type": "set_render_quality", "render_quality": args.render_quality}]
+                                # Initialize scene
+                                commands.append(c.get_add_scene(scene))
+                                # get the object and set location
+                                model_records = []
+                                object_ids = []
+                                for i in range(n):
+                                    object_id = c.get_unique_id()
+                                    object_ids.append(object_id)
+                                    model_record = ModelLibrarian(lib).get_record(objects[i])
+                                    model_records.append(model_record)
 
-                            # set color
-                            color_name, color_value = colors[i]
-                            r, g, b = color_value
-                            commands.append({"$type": "set_color", "color": {"r": r, "g": g, "b": b, "a": 1.0}, "id": object_id})
+                                    x, y, z = coordinates[i]
+                                    commands.extend(c.get_add_physics_object(model_name=objects[i],
+                                                                            library=lib,
+                                                                            position={"x": x,  "y": y, "z": z},
+                                                                            scale_factor={"x": size, "y": size, "z": size},
+                                                                            gravity=False,
+                                                                            default_physics_values=False,
+                                                                            object_id=object_id))
+                                    
+                                    # set material
+                                    commands.extend(TDWUtils.set_visual_material(c=c, substructure=model_record.substructure, material=material, object_id=object_id))
+                                    
+                                    # set color
+                                    color_name, color_value = colors[i]
+                                    r, g, b = color_value
+                                    commands.append({"$type": "set_color", "color": {"r": r, "g": g, "b": b, "a": 1.0}, "id": object_id})
 
-                        for object_name, color_name in zip(objects, colors):
-                            object_info = {
-                                        "type": object_name,
-                                        # "material": material,
-                                        "color": color_name[0],
-                                        "size": size}
-                            objects_info.append(object_info)
+                                for object_name, color_name in zip(objects, colors):
+                                    object_name = object_name.split("_")[1]
+                                    color_name = color_name[0].replace('_', ' ')
+                                    object_info = {
+                                                "type": object_name,
+                                                "material": material,
+                                                "color": color_name,
+                                                "size": size}
+                                    objects_info.append(object_info)
 
-                        c.communicate(commands)
-
-                        movable_obejct_id = object_ids[-1]
-                        start = coordinates[-1]
-                        start_object = objects[-1]
-                        filtered_start_object = start_object.split("_")[1]
-                        start_color = colors[-1]
-                        start_color_name = start_color[0].replace('_', ' ')
-                        # create a pool of choices
-                        object_color_pool = []
-                        for color, object in zip(colors[:-1], objects[:-1]):
-                            color_name = color[0]
-                            color_name = color_name.replace('_', ' ')
-                            object_name = object.split('_')[1]
-                            object_color_pool.append(f'{color_name} {object_name}')
-
-                        possible_destinations = determine_possible_moves(start, coordinates, size)
-                        # skip this case if no path is available
-                        if len(possible_destinations) < 1:
-                            continue
-
-                        destination = random.sample(possible_destinations, 1)
-                        destination = destination[0]
-                        destination_index = find_tuple_in_list(destination, coordinates)
-                        destination_object = objects[destination_index]
-                        destination_color = colors[destination_index]
-                        # remove the destination color
-                        destination_color_name = destination_color[0].replace('_', ' ')
-                        filtered_end_object = destination_object.split("_")[1]
-                        object_color_pool.remove(f"{destination_color_name} {filtered_end_object}")
-
-                        # output setting
-                        task_name = f"scenario_{count}/speed{speed}x"
-                        output_path_speed = os.path.join(output_path, task_name)
-
-                        # Camera specifying
-                        # for camera_id in cameras:
-                        camera_id = camera_id.lower()
-                        camera = get_cameras(camera_id, camera_config)
-                        c.add_ons.append(camera)
-
-                        capture = ImageCapture(avatar_ids=[camera_id], path=output_path_speed, png=True)
-                        c.add_ons.append(capture)
-
-                        start_xz = [start[0], start[2]]
-                        end_xz = [destination[0], destination[2]]
-                        path_coordinates = generate_line_coords(start_point=start_xz, end_point=end_xz, num_points=30//speed)
-                        if path_coordinates is not None:
-                            for (x_d, z_d) in path_coordinates:
-                                commands= [{"$type": "teleport_object", 
-                                                "position": {"x": x_d, "z": z_d, "y": y}, 
-                                                "id": movable_obejct_id, "physics": False, "absolute": True, "use_centroid": False}]
                                 c.communicate(commands)
 
-                        ###########################################################
-                        # image info of current speed
-                        image_info["image_path"] = f"{output_path_speed}"
-                        image_info["objects_info"] = objects_info
-                        image_info["speed"] = speed
+                                movable_obejct_id = object_ids[-1]
+                                start = coordinates[-1]
+                                start_object = objects[-1]
+                                start_object = start_object.split("_")[1]
+                                start_color = colors[-1]
+                                start_color_name = start_color[0].replace('_', ' ')
 
-                        # add to all speeds dictionary
-                        image_infos[f'image{speed}'] = copy.deepcopy(image_info)
-                        choices = [colors[-1][0], "They are the same"]
+                                image_info["moving"] = {
+                                                        "type": start_object,
+                                                        "material": material,
+                                                        "color": start_color_name,
+                                                        "size": size}
 
-                        chosen_colors = set([c[0] for c in colors])
-                        available_colors = list(set(COLORS.keys()) - chosen_colors)
-                        if available_colors:
-                            random_color = random.choice(available_colors)
-                            sampled_color_name, sampled_color_value = (random_color, COLORS[random_color])
-                            sampled_color_value = tuple(value / 255 for value in sampled_color_value)
-                        colors.pop()
-                        colors.append((sampled_color_name, sampled_color_value))
-                        choices.append(colors[-1][0])
+                                possible_destinations = determine_possible_moves(start, coordinates, size)
+                                # skip this case if no path is available
+                                if len(possible_destinations) < 1:
+                                    continue
 
-                        # the choices this scenario
-                        random.shuffle(choices)
-                        scenario_info['choices'] = choices
-                        ##########################################################
+                                destination = random.sample(possible_destinations, 1)
+                                destination = destination[0]
+                                destination_index = find_tuple_in_list(destination, coordinates)
+                                destination_object = objects[destination_index]
+                                destination_color = colors[destination_index]
+                                destination_color_name = destination_color[0].replace('_', ' ')
+                                destination_object = destination_object.split("_")[1]
 
-                    # add the image_infos to this scenario
-                    scenario_info['images'] = image_infos
-                    infos.append(copy.deepcopy(scenario_info))
-                    count += 1
+                                image_info["reference"] = {
+                                                        "type": destination_object,
+                                                        "material": material,
+                                                        "color": destination_color_name,
+                                                        "size": size}
 
-                    # Reset for the next loop
-                    c.add_ons.clear() 
-                    c.communicate({"$type": "destroy_all_objects"})
-                    c.communicate(TDWUtils.create_empty_room(12, 12))
+                                # output setting
+                                task_name = f"scenario_{count}/speed{speed}x"
+                                output_path_speed = os.path.join(output_path, task_name)
+
+                                # Camera specifying
+                                camera_id = camera_id.lower()
+                                camera = get_cameras(camera_id, camera_config)
+                                c.add_ons.append(camera)
+
+                                capture = ImageCapture(avatar_ids=[camera_id], path=output_path_speed, png=True)
+                                c.add_ons.append(capture)
+
+                                start_xz = [start[0], start[2]]
+                                end_xz = [destination[0], destination[2]]
+                                # Calculate the direction vector
+                                direction_vector = [end_xz[0] - start_xz[0], end_xz[1] - start_xz[1]]
+
+                                # Extend the line by doubling the distance (2 times the direction vector)
+                                end_xz = [start_xz[0] + speed * direction_vector[0], start_xz[1] + speed * direction_vector[1]]
+
+                                path_coordinates = generate_line_coords(start_point=start_xz, end_point=end_xz, num_points=30)
+                                if path_coordinates is not None:
+                                    for (x_d, z_d) in path_coordinates:
+                                        commands= [{"$type": "teleport_object", 
+                                                        "position": {"x": x_d, "z": z_d, "y": y}, 
+                                                        "id": movable_obejct_id, "physics": False, "absolute": True, "use_centroid": False}]
+                                        c.communicate(commands)
+
+                                ###########################################################
+                                image_info["image_path"] = f"{output_path_speed}/{camera_id}"
+                                image_info["objects_info"] = objects_info
+
+                                colors = []
+                                random_colors = random.sample(list(COLORS.keys()), n)
+                                for color in random_colors:
+                                    sampled_color_name, sampled_color_value = (color, COLORS[color])
+                                    sampled_color_value = tuple(value / 255 for value in sampled_color_value)
+                                    colors.append((sampled_color_name, sampled_color_value))
+                                
+                                # add to all speeds dictionary
+                                image_infos[speed] = copy.deepcopy(image_info)
+                                ##########################################################
+
+                            # add the image_infos to this scenario
+                            infos.append(copy.deepcopy(image_infos))
+                            count += 1
+
+                            # Reset for the next loop
+                            c.add_ons.clear() 
+                            c.communicate({"$type": "destroy_all_objects"})
+                            c.communicate(TDWUtils.create_empty_room(12, 12))
         
     finally:
         # Save object info to JSON

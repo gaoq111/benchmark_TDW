@@ -153,14 +153,17 @@ class VisualAttributeTask(ObjectTask):
         
         if(question_type == "color"):
             ### Fix the material if we are testing color
-            material_pairs = [["concrete_raw_damaged" for i in range(self.num_objects)]]
+            material_pairs = [["concrete_raw_damaged" for i in range(self.num_objects)], 
+                              ["rock_surface_rough"  for i in range(self.num_objects)],
+                              ["glass_fiber_plain_weave" for i in range(self.num_objects)]]
+            texture_pairs = [[1.0 for i in range(self.num_objects)]]
         else:
             color_pairs = [[key for i in range(self.num_objects)] for key in ['red', 'blue','black','green','white']]
             
         if(not os.path.exists(self.output_path)):
             os.makedirs(self.output_path, exist_ok=True)
         
-        with open(os.path.join(self.output_path, "index.jsonl"), "w") as f:
+        with open(os.path.join(self.output_path, f"{self.name}_index.jsonl"), "w") as f:
             
             
             for background in tqdm(SELECTED_SCENES):

@@ -64,9 +64,10 @@ class AbstractTask(abc.ABC):
             print(f"Error: {e}")
             raise e
 
-        time.sleep(2)
+        time.sleep(5)
         self.commands = [{"$type": "set_screen_size", "width": self.screen_size[0], "height": self.screen_size[1]}, 
                 {"$type": "set_render_quality", "render_quality": self.render_quality},
+                #{"$type": "set_field_of_view", "field_of_view": 55},
                 ]
         
         

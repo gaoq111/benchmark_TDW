@@ -1,0 +1,18 @@
+[
+    {
+        "source": [
+            "/data/shared/sim/benchmark/benchmark_TDW/images/test_custom_pos"
+        ],
+        "sizes": 1,
+        "background": null,
+        "colors": "red",
+        "obj_names": "prim_sphere",
+        "positions": [
+            [
+                0,
+                0,
+                0
+            ]
+        ]
+    }
+]

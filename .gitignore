@@ -15,6 +15,27 @@ outputs/
 */output/
 */testbed*/
 images/
+trajectory_new_benchmark/
+temporal_positioning_01_05/
+temporal_positioning_01_07/
+temporal_positioning_01_07_with_light/
+temporal_extension_yjx_01_05/
+temporal_extension_yjx_01_05_with_light/
+speed_new_benchmark/
+speed_copy/
+relative_position/
+size_analogy/
+spatial_reasoning/
+occupancy/
+output_test/
+drop_examples/
+direction_test1/
+compositionality/output2/
+compositionality/output3/
+attributes/output1/
+attributes/output2/
+attributes/output_legacy/
+output*/
 
 # Distribution / packaging
 .Python

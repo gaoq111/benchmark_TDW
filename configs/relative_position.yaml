@@ -1,0 +1,20 @@
+defaults:  
+  - _self_  
+  - override hydra/hydra_logging: disabled  
+  - override hydra/job_logging: disabled  
+  
+hydra:  
+  output_subdir: null  
+  run:  
+    dir: .
+    
+name: relative_position
+output_path: output
+port: 1077
+display: :4
+screen_size: [512, 512]
+physics: false
+render_quality: 10
+question_type: relative_position
+library: models_special.json
+scene: tdw_room # floorplan_2b, empty_scene box_room_2018 archviz_house mm_kitchen_2a tdw_room

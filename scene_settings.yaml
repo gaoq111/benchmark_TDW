@@ -22,7 +22,7 @@ empty_scene:
     right: {"x": 2.5, "z": 0, "y": 5.2}
     front: {"x": 0, "z": -2.5, "y": 5.2}
     back: {"x": 0, "z": 2.5, "y": 5.2}
-    look_at: {"x": 0, "y": 0.1, "z": 0}
+    look_at: {"x": 0, "y": 5.1, "z": 0}
   object:
     center: [0,5.1,0]
     top: [0,5.1,1]
@@ -38,6 +38,7 @@ box_room_2018:
     right: {"x": 2.5, "z": 0, "y": 0.2}
     front: {"x": 0, "z": -2.5, "y": 0.2}
     back: {"x": 0, "z": 2.5, "y": 0.2}
+    top_front: {"x": 0, "z": -2, "y": 3.1}
     look_at: {"x": 0, "y": 0, "z": 0}
   object:
     center: [0,0.1,0]
@@ -49,11 +50,12 @@ box_room_2018:
 
 monkey_physics_room:
   camera:
-    top: {"x": 0, "z": 0, "y": 2.5}
+    top: {"x": 0, "z": 0, "y": 2.2}
     left: {"x": -2.5, "z": 0, "y": 0.25}
     right: {"x": 2.5, "z": 0, "y": 0.25}
     front: {"x": 0, "z": -2.5, "y": 0.25}
     back: {"x": 0, "z": 2.5, "y": 0.25}
+    top_front: {"x": 0, "z": -2.2, "y": 3.3}
     look_at: {"x": 0, "y": 0.15, "z": 0}
   object:
     center: [0,0.15,0]
@@ -70,6 +72,7 @@ ruin:
     right: {"x": 1, "z": -1.00, "y": 0.2}
     front: {"x": -1.5, "z": -3.5, "y": 1.2} #FAKE FRONT
     back: {"x": -1.5, "z": 1.5, "y": 0.2}
+    top_front: {"x": -1.5, "z": -3.2, "y": 3.3}
     look_at: {"x": -1.5, "y": 0.1, "z": -1.00}
   object:
     center: [-1.5,0.1,-1.00]
@@ -86,11 +89,12 @@ suburb_scene_2018:
     right: {"x": 2.5, "z": 0, "y": 0.2}
     front: {"x": 0, "z": -2.5, "y": 0.2}
     back: {"x": 0, "z": 2.5, "y": 0.2}
+    top_front: {"x": 0, "z": -2.2, "y": 3.3}
     look_at: {"x": 0, "y": 0.1, "z": 0}
   object:
-    center: [0,0.1,0]
-    top: [0,0.1,1]
-    right: [1,0.1,0]
-    bottom: [0,0.1,-1]
-    left: [-1,0.1,0]
+    center: [0,0,0]
+    top: [0,0,1]
+    right: [1,0,0]
+    bottom: [0,0,-1]
+    left: [-1,0,0]
   vision_boundary: {'x': [-1, 1], 'z': [-1, 1], 'y': 0.1}

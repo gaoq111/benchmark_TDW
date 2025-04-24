@@ -17,13 +17,13 @@ import copy
 from tdw.add_ons.interior_scene_lighting import InteriorSceneLighting
 
 # Initiate a tdw server:
-# DISPLAY=:4 /data/shared/sim/benchmark/tdw/build/TDW.x86_64 -port 1071
+# DISPLAY=:4 /data/shared/sim/benchmark/tdw/build/TDW.x86_64 -port=1071
 
 # Connect to the server
-# DISPLAY=:4 ./TDW.x86_64 -port 1071
+# DISPLAY=:4 ./TDW.x86_64 -port=1071
 
 # Run this script
-# python3 generate_counting_relative.py --output_path ./output
+# python3 generate_occupancy_distance.py --output_path ./output
 
 
 def generate_color_shape_distribution(color_tuple, shape_tuple, combined_tuples):
@@ -330,7 +330,7 @@ if __name__ == "__main__":
     random.seed(39)
     parser = argparse.ArgumentParser(description="Generate a dataset with different object configurations.")
     parser.add_argument("--screen_size", type=int, nargs='+', default=(512, 512), help="Width and Height of Screen. (W, H)")
-    parser.add_argument("--output_path", type=str, default="./position", help="The path to save the outputs to.")
+    parser.add_argument("--output_path", type=str, default="./occupancy/distance", help="The path to save the outputs to.")
     parser.add_argument("--render_quality", type=int, default=5, help="The Render Quality of the output.")
 
     args = parser.parse_args()

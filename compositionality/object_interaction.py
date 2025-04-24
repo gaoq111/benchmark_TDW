@@ -77,7 +77,7 @@ class ObjectInteractionTask(ObjectTask):
         # interior_lighting.reset(hdri_skybox="old_apartments_walkway_4k", aperture=8, focus_distance=2.5, ambient_occlusion_intensity=0.125, ambient_occlusion_thickness_modifier=3.5, shadow_strength=1)
             
         ### Cameras
-        self.camera = ["front", "right", "top"] 
+        self.camera = ["top_front"] 
         add_cameras(self.c, self.camera, output_pth, self.scene)
         self.image_ticks = 0
         #print("Cameras added!")
@@ -126,7 +126,7 @@ class ObjectInteractionTask(ObjectTask):
         vel = array_to_transform(obj_move_info.velocity)
         return vel
     
-    def render_non_physics_move(self, obj_ids, obj_manager, move_steps=3):
+    def render_non_physics_move(self, obj_ids, obj_manager, move_steps=5):
         self.commands.append({"$type": "simulate_physics",
                             "value": False})
         
@@ -134,7 +134,7 @@ class ObjectInteractionTask(ObjectTask):
         for i in range(move_steps):
             for obj_id in obj_ids:   
                 vel = self.get_velocity(obj_manager.rigidbodies[obj_id])
-                self.transport_object(obj_id, vel, 0.01)
+                self.transport_object(obj_id, vel, 0.05)
                 
             self.step()
             
@@ -156,20 +156,26 @@ class ObjectInteractionTask(ObjectTask):
                                 "id": objects[i].object_id,
                                 "force": force})
     
-    def add_pulse_render(self, objects, move_steps=3):
+    def add_pulse_render(self, objects, move_steps=3, z = 0):
         # pulse = {"x": 0, "y": 0.01, "z": 0}
         # obj_size = objects[-1].get_size()
         # force = self.scale_force(pulse, math.pow(obj_size, 3))
         self.commands.append({"$type": "set_velocity",
                             "id": objects[-1].object_id,
-                            "velocity": {"x": 0, "y": 30, "z": -20}})
+                            "velocity": {"x": 5, "y":0, "z": 0}})
+        self.step()
+
+        self.commands.append({"$type": "set_velocity",
+                            "id": objects[-1].object_id,
+                            "velocity": {"x": 15, "y":0, "z": z}})
+        for i in range(move_steps):
+            self.step()
 
         # self.commands.append({"$type": "apply_force_to_object",
         #                     "id": objects[-1].object_id,
-        #                     "force": force})
+        #                     "force": {"x": 0, "y":0.0001, "z": 0.00010}})
         
-        for i in range(move_steps):
-            self.step()
+        # self.step()
         
 
     def trial(self, background, colors, shapes, materials, textures, sizes, force_scales, physic_types,
@@ -185,7 +191,7 @@ class ObjectInteractionTask(ObjectTask):
         pbar = tqdm(total=total_size)
         
         #### Object position
-        positions = [{"x": -1, "y": 0.2, "z": 1}, {"x": -1, "y": 0.2, "z": -1}, {"x": 0, "y": 0.2, "z": 0}]
+        positions = [{"x": -1, "y": 0.05, "z": 1}, {"x": -1, "y": 0.05, "z": -1}, {"x": 0, "y": 0.05, "z": 0}]
         positions = self.adapt_center_position(positions, scene_center)
         
         scene_id = 0
@@ -203,7 +209,7 @@ class ObjectInteractionTask(ObjectTask):
                                     random.seed(trial_id*10000 + scene_id)
                                     
                                     output_dir = os.path.join(self.output_path, self.name)
-                                    output_pth = os.path.join(output_dir, "images", f"{background}-scene_{scene_id:04d}")
+                                    output_pth = os.path.join(output_dir, "images", f"{background}-scene_{scene_id:04d}-{force_scale}-{physic_type}")
                                     if os.path.exists(output_pth) and flush:
                                         shutil.rmtree(output_pth)
                                     
@@ -212,9 +218,11 @@ class ObjectInteractionTask(ObjectTask):
                                     objects = []
                                     
                                     for i, (color, shape, size, material, texture_scale) in enumerate(zip(color_pair, shape_pair, size_pair, material_pair, texture_pair)):
-                                
-                                        object_info = self.generate_regular_object(shape, position=positions[i], scale=size, color=color, rotation={"x": 0, "y": np.random.uniform(-90, 90), "z": 0}, 
-                                                                                material=material, texture_scale=1)
+                                        
+                                        positions_cyl = [{"x": -1, "y": 0.05+size/2, "z": 1}, {"x": -1, "y": 0.05+size/2, "z": -1}, {"x": 0, "y": 0.05+size/2, "z": 0}]
+                                        positions_cyl = self.adapt_center_position(positions_cyl, scene_center)
+                                        object_info = self.generate_regular_object(shape, position=positions_cyl[i] if shape == 'prim_cyl' else positions[i], scale=size, color=color, rotation={"x": 0, "y": np.random.uniform(-90, 90), "z": 0}, 
+                                                                                material=material, texture_scale=texture_scale, mass=16*size**3, bounciness=1)
                                         objects.append(object_info)
                                     object_ids = [obj.object_id for obj in objects]
 
@@ -234,11 +242,14 @@ class ObjectInteractionTask(ObjectTask):
                                         if(len(self.collision_manager.obj_collisions) > 0): 
                                             self.collison_frames.append(self.image_ticks-1)
                                             
-                                            if(physic_type == "non_physics"):
-                                                self.render_non_physics_move(object_ids[:-1], self.object_manager, move_steps=3)
+                                            # if(physic_type == "non_physics"):
+                                            #     self.render_non_physics_move(object_ids[:-1], self.object_manager, move_steps=3)
+                                            #     break
+                                            if(physic_type == "countefactual_pulse_1"):
+                                                self.add_pulse_render(objects, move_steps=3, z=15)
                                                 break
-                                            elif(physic_type == "countefactual_pulse"):
-                                                self.add_pulse_render(objects, move_steps=3)
+                                            elif(physic_type == "countefactual_pulse_2"):
+                                                self.add_pulse_render(objects, move_steps=3, z=-15)
                                                 break
                                         
                                     with open(os.path.join(output_dir, index_name), "a") as f:
@@ -262,18 +273,21 @@ class ObjectInteractionTask(ObjectTask):
         
         
         count = 0
-        color_pairs = self.attr_generate_func["color"](choices=SELECTED_COLORS)
+        color_pairs = self.attr_generate_func["color"](choices=SELECTED_COLORS)[:25]
         # This cone does not move
         SELECTED_OBJECTS.remove("prim_cone")
         shape_pairs = self.attr_generate_func["shape"](choices=SELECTED_OBJECTS, num=1)
+        # shape_pairs = self.attr_generate_func["shape"](choices=["prim_cyl", "prim_cube"], num=1)
         shape_pairs = [["prim_sphere", "prim_sphere"]+list(pair) for pair in shape_pairs]
         
         material_pairs = self.attr_generate_func["material"](choices=SELECTED_MATERIALS)
-        material_pairs = [["concrete_raw_damaged" for _ in range(self.num_objects)]]
-        texture_pairs = self.attr_generate_func["texture"](choices=SELECTED_TEXTURES)[:1]
-        size_pairs = self.attr_generate_func["size"](choices=[0.2,0.5])
-        force_scales = [0.5, 1]
-        physic_types = ["normal", "non_physics", "countefactual_pulse"]
+        material_pairs = [["concrete_raw_damaged" for _ in range(self.num_objects)], ["glass_clear" for _ in range(self.num_objects)]] #"glass_clear"
+        texture_choices = [0.1, 1.0]
+        texture_pairs = [[texture for _ in range(self.num_objects)] for texture in texture_choices]
+        size_pairs = self.attr_generate_func["size"](choices=[0.25,0.3])
+        #size_pairs = self.attr_generate_func["size"](choices=[0.5,0.5])
+        force_scales = [0.5, 0.7, 0.9]
+        physic_types = ["countefactual_pulse_1","countefactual_pulse_2", "normal"]  # , "non_physics", "countefactual_pulse", "normal"]
         
         # color_pairs = color_pairs[:1]
         # shape_pairs = shape_pairs[:1]
@@ -286,17 +300,28 @@ class ObjectInteractionTask(ObjectTask):
         if(not os.path.exists(output_dir)):
             os.makedirs(output_dir, exist_ok=True)
         
-        with open(os.path.join(output_dir, "index.jsonl"), "w") as f:
+        with open(os.path.join(output_dir, f"{self.name}_index.jsonl"), "w") as f:
             pass
+
+        backgrounds = SELECTED_SCENES
+        backgrounds.remove("ruin")
         
         for background in tqdm(SELECTED_SCENES):
             
+            print(color_pairs)
+            print(shape_pairs)
+            print(material_pairs)
+            print(texture_pairs)
+            print(size_pairs)
+            print(force_scales)
             
             self.trial(background, color_pairs, shape_pairs, material_pairs, texture_pairs, size_pairs, 
                         force_scales, physic_types,
-                        index_name="index.jsonl", flush=flush)
+                        index_name=f"{self.name}_index.jsonl", flush=flush)
             count += len(color_pairs) * len(shape_pairs) * len(material_pairs) * len(texture_pairs) * len(size_pairs) \
                     * len(force_scales)
+            
+            break
         
         print(f"Total number of trials: {count}") 
            

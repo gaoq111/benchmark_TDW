@@ -214,7 +214,21 @@ class TemporalExtension(AbstractTask):
             #only works for two objects
             first_move_obj = self.object_list[0]
             second_move_obj = self.object_list[1]
-            [start1, start2, end1, end2] = np.sort(np.random.choice(MOVE_STEP, size=4, replace=False)) #[start1, start2, end1, end2]
+            valid = False
+            diff = random.randint(2, 5)
+
+            while not valid:
+                # Generate four sorted unique values from MOVE_STEP
+                [start1, start2] = sorted(np.random.choice(MOVE_STEP, size=2, replace=True))
+                if start2 < start1:
+                    (t1, t2) = (start1, end1)
+                    (start1, end1) = (start2, end2)
+                    (start2, end2) = (t1, t2)
+                
+                # Check if the condition is met
+                if abs(abs(end1 - start1) - abs(end2 - start2)) >= 2:
+                    valid = True
+
             move_dict[first_move_obj.object_id] = range(start1, end1 + 1)
             move_dict[second_move_obj.object_id] = range(start2, end2 + 1)
             
@@ -226,7 +240,7 @@ class TemporalExtension(AbstractTask):
                 for obj in self.object_list:
                     if obj.object_id in move_dict:
                         if i in move_dict[obj.object_id]:
-                            magnitude = 1.0 / len(move_dict[obj.object_id])
+                            magnitude = 0.15
                             move_commands = move_object_dict[obj.object_id].move_and_get_commands_only(movement = obj.motion, magnitude=magnitude)
                             commands.extend(move_commands)
                 print(f"Step {i} completed")
@@ -252,7 +266,7 @@ class TemporalExtension(AbstractTask):
                 output_res_cam[cam]["query"] = output_path_dict["query"] #
                 
                 
-                output_res_cam[cam]["object_move_first"] = {
+                output_res_cam[cam]["object_move_short"] = {
                     "move_time": start1,
                     "end_time": end1,
                     "model_name": first_move_obj.model_name,
@@ -264,7 +278,7 @@ class TemporalExtension(AbstractTask):
                     "material": first_move_obj.material,
                     "texture_scale": first_move_obj.texture_scale
                 }
-                output_res_cam[cam]["object_move_second"] = {
+                output_res_cam[cam]["object_move_long"] = {
                     "move_time": start2,
                     "end_time": end2,
                     "model_name": second_move_obj.model_name,
@@ -386,62 +400,65 @@ def main(cfg: DictConfig):
     scenes = SELECTED_SCENES
     random.shuffle(scenes)
 
-    for scene in scenes:
-        for material1, material2  in material_pairs[:2]:
-            for texture1, texture2 in texture_pairs[:2]:
-                for size1, size2 in size_pairs[:2]:
-                    for object1, object2 in object_pairs[:6]: 
-                        for color1, color2 in color_pairs[:6]:
-                            task = None
-                            task = TemporalExtension(**cfg)
-                            np.random.seed(seed)
-                            seed += 1
-                            main_obj = ObjectType(
-                                model_name=object1,
-                                library="models_core.json",
-                                position=get_position(scene, x_range, y_range, z_range),
-                                rotation={"x": 0, "y": np.random.uniform(rotation_range[0], rotation_range[1]), "z": 0},
-                                scale_factor=size1,
-                                texture_scale=texture1,
-                                object_id=None,
-                                material=material1,
-                                motion=np.random.choice(AVAILABLE_MOTION),
-                                color=color1
-                            )
-                            fixed_obj = ObjectType(
-                                model_name=object2,
-                                library="models_core.json",
-                                position=get_position_with_offset(scene, x_range, y_range, z_range, 0.2),
-                                rotation={"x": 0, "y": np.random.uniform(rotation_range[0], rotation_range[1]), "z": 0},
-                                scale_factor=size2,
-                                texture_scale=texture2,
-                                object_id=None,
-                                material=material2,
-                                motion=np.random.choice([motion for motion in AVAILABLE_MOTION if motion != main_obj.motion]),
-                                color=color2
-                            )
+    for scene in SELECTED_SCENES:
+        random.shuffle(texture_pairs)
+        for texture1, texture2 in texture_pairs[:2]:
+            random.shuffle(size_pairs)
+            for size1, size2 in size_pairs[:2]:
+                random.shuffle(object_pairs)
+                for object1, object2 in object_pairs[:6]: 
+                    random.shuffle(color_pairs)
+                    for color1, color2 in color_pairs[:6]:
+                        task = None
+                        task = TemporalExtension(**cfg)
+                        np.random.seed(seed)
+                        seed += 1
+                        main_obj = ObjectType(
+                            model_name=object1,
+                            library="models_core.json",
+                            position=get_position(scene, x_range, y_range, z_range),
+                            rotation={"x": 0, "y": np.random.uniform(rotation_range[0], rotation_range[1]), "z": 0},
+                            scale_factor=size1,
+                            texture_scale=texture1,
+                            object_id=None,
+                            material="concrete_raw_damaged",
+                            motion=np.random.choice(AVAILABLE_MOTION),
+                            color=color1
+                        )
+                        fixed_obj = ObjectType(
+                            model_name=object2,
+                            library="models_core.json",
+                            position=get_position_with_offset(scene, x_range, y_range, z_range, 0.2),
+                            rotation={"x": 0, "y": np.random.uniform(rotation_range[0], rotation_range[1]), "z": 0},
+                            scale_factor=size2,
+                            texture_scale=texture2,
+                            object_id=None,
+                            material="concrete_raw_damaged",
+                            motion=np.random.choice([motion for motion in AVAILABLE_MOTION if motion != main_obj.motion]),
+                            color=color2
+                        )
+                        
+                        main_obj_shape_id = get_object_shape_id(main_obj)
+                        fixed_obj_shape_id = get_object_shape_id(fixed_obj)
+                        
+                        if main_obj_shape_id == fixed_obj_shape_id:
+                            continue
+                        
+                        main_obj_id = get_object_id(main_obj)
+                        fixed_obj_id = get_object_id(fixed_obj)
+                        
+                        case_id = main_obj_id + "_" + fixed_obj_id
+                        
+                        if case_id in gen_id_set:
+                            continue
+                        else:
+                            gen_id_set.add(case_id)
                             
-                            main_obj_shape_id = get_object_shape_id(main_obj)
-                            fixed_obj_shape_id = get_object_shape_id(fixed_obj)
-                            
-                            if main_obj_shape_id == fixed_obj_shape_id:
-                                continue
-                            
-                            main_obj_id = get_object_id(main_obj)
-                            fixed_obj_id = get_object_id(fixed_obj)
-                            
-                            case_id = main_obj_id + "_" + fixed_obj_id
-                            
-                            if case_id in gen_id_set:
-                                continue
-                            else:
-                                gen_id_set.add(case_id)
-                                
-                                print(f"Generated {len(gen_id_set)} unique IDs")
-                                task.run(scene, main_obj_list=[main_obj], fixed_obj_list=[fixed_obj], seed=seed)
-                                pbar.update(1)
-                            
-                            del task
+                            print(f"Generated {len(gen_id_set)} unique IDs")
+                            task.run(scene, main_obj_list=[main_obj], fixed_obj_list=[fixed_obj], seed=seed)
+                            pbar.update(1)
+                        
+                        del task
 
 if __name__ == "__main__":
     main()

@@ -5,14 +5,16 @@ import yaml
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from typing import List
 from interface import ObjectType, AVAILABLE_CAMERA_POS
+from tdw.tdw_utils import TDWUtils
 
 from tdw.add_ons.image_capture import ImageCapture
 from tdw.add_ons.third_person_camera import ThirdPersonCamera
 
 import numpy as np
 
-SELECTED_SCENES = ["box_room_2018", "empty_scene", "monkey_physics_room", "ruin", "suburb_scene_2018"]
-SELECTED_MATERIALS = ["concrete_raw_damaged", "iron_rusty", "plastic_base", "wood_american_chestnut"] #"leather_bull",
+#SELECTED_SCENES = ["box_room_2018", "monkey_physics_room", "ruin", "suburb_scene_2018"]
+SELECTED_SCENES = ["box_room_2018"]
+SELECTED_MATERIALS = ["concrete_raw_damaged", "glass_clear", "rock_surface_rough"] #"leather_bull", "wood_american_chestnut"
 SELECTED_OBJECTS = [
     "prim_cone",
     "prim_sphere",
@@ -20,6 +22,7 @@ SELECTED_OBJECTS = [
     "prim_cyl",
 ]
 SELECTED_SIZES = [0.1, 0.2, 0.4]
+SELECTED_SIZES_SP_R = [0.1, 0.4, 0.7]
 SELECTED_TEXTURES = [0.1, 0.5, 1.0]
 SELECTED_COLORS = {
     "red": {
@@ -46,15 +49,15 @@ SELECTED_COLORS = {
     "gray": {
         "r": 0.5, "g": 0.5, "b": 0.5, "a": 1
     },
-    "black": {
-        "r": 0, "g": 0, "b": 0, "a": 1
-    },
+    # "black": {
+    #     "r": 0, "g": 0, "b": 0, "a": 1
+    # },
     "white": {
         "r": 1, "g": 1, "b": 1, "a": 1
     },
-    "transparent": {
-        "r": 1, "g": 1, "b": 1, "a": 0.5
-    },
+    # "transparent": {
+    #     "r": 1, "g": 1, "b": 1, "a": 0.5
+    # },
 }
 
 def array_to_transform(array):
@@ -73,15 +76,59 @@ def numpy_to_python(obj):
         return [numpy_to_python(item) for item in obj]
     else:
         return obj
+    
+def coordinate_addition(coordinates):
+    total = np.array([0.0,0.0,0.0])
+    for coordinate in coordinates:
+        if(type(coordinate) is dict):
+            total += [coordinate[key] for key in ["x", "y", "z"]]
+        else:
+            total += coordinate
+
+    return TDWUtils.array_to_vector3(total)
+
+def coordinate_difference(c1, c2):
+    if (type(c1) is dict):
+        c1 = TDWUtils.vector3_to_array(c1)
+    if (type(c2) is dict):
+        c2 = TDWUtils.vector3_to_array(c2)
+
+    return TDWUtils.array_to_vector3(c1-c2)
 
 
-def get_cameras(camera_position: str, scene: str):
+def get_cameras(camera_position: str, scene: str, offset=[0.0, 0.0, 0.0]):
+    offset = offset.copy()
     # read the camera and object configs
+    # if(camera_position == "top"):
+    #     if(type(offset) is dict):
+    #         offset["y"] = 0.3
+    #     else:
+    #         offset[1] = 0.3
+    if (camera_position == "front"):
+        if(type(offset) is dict):
+            offset["y"] += 0.3
+        else:
+            offset[1] = offset[1] + 0.3
+    if (camera_position == "back"):
+        if(type(offset) is dict):
+            offset["y"] += 0.3
+        else:
+            offset[1] = offset[1] + 0.3
+    if (camera_position == "left"):
+        if(type(offset) is dict):
+            offset["y"] += 0.3
+        else:
+            offset[1] = offset[1] + 0.3
+    if (camera_position == "right"):
+        if(type(offset) is dict):
+            offset["y"] += 0.3
+        else:
+            offset[1] = offset[1] + 0.3
     with open('/data/shared/sim/benchmark/benchmark_TDW/scene_settings.yaml', 'r') as file:
         config = yaml.safe_load(file)[scene]['camera']
-    return ThirdPersonCamera(position=config[camera_position],
+    return ThirdPersonCamera(position=coordinate_addition([config[camera_position], offset]),
                                 avatar_id=camera_position,
-                                look_at=config["look_at"])
+                                look_at=coordinate_addition([config["look_at"], offset]))
 
 
 def get_camera_views(motion, camera_view: List[str]):
@@ -101,9 +148,9 @@ def get_camera_views(motion, camera_view: List[str]):
     else:
         return camera_view
 
-def add_cameras(c, camera_ids, output_pth, scene):
+def add_cameras(c, camera_ids, output_pth, scene, offset={}):
     for cam in camera_ids:
-        c.add_ons.append(get_cameras(cam, scene))
+        c.add_ons.append(get_cameras(cam, scene, offset[cam] if cam in offset else [0.0, 0.0, 0.0]))
     capture = ImageCapture(avatar_ids=camera_ids, path=output_pth, png=True)
     c.add_ons.append(capture)
 
@@ -142,6 +189,13 @@ def get_position(scene: str, x_range: tuple, y_range: tuple, z_range: tuple):
         config = yaml.safe_load(file)[scene]['object']['center']
     x, y, z = config
     position={"x": x + np.random.uniform(x_range[0], x_range[1]), "y": y +np.random.uniform(y_range[0], y_range[1]), "z": z + np.random.uniform(z_range[0], z_range[1])}
+    return position
+
+def get_bottom_position(scene: str):
+    with open('/data/shared/sim/benchmark/benchmark_TDW/scene_settings.yaml', 'r') as file:
+        config = yaml.safe_load(file)[scene]['object']['bottom']
+    x, y, z = config
+    position={"x": x, "y": y, "z": z}
     return position
 
 def get_position_with_offset(scene: str, x_range: tuple, y_range: tuple, z_range: tuple, offset):

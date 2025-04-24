@@ -103,6 +103,7 @@ def generate_square_coords(num_points: int = 100, side_length: float = 1, center
     return points[:num_points]
 
 
+
 def generate_triangle_coords(num_points: int = 100, side_length: float = 1, center: tuple = (0, 0), direction: str = "clockwise") -> list:
     """
     Generate the coordinates of an equilateral triangle around a specified center.
@@ -168,3 +169,43 @@ def generate_line_coords(start_point: tuple, end_point: tuple, num_points: int =
 
     # Combine x and y into a list of tuples
     return list(zip(x_coords, y_coords))
+
+def generate_line_coords_with_length(start_point: tuple, length: float, direction: str = "right", num_points: int = 100) -> list:
+    """
+    Generate the coordinates of a line from a start point, with a specified length and direction.
+
+    :param start_point: A tuple (x_start, y_start) specifying the starting point of the line.
+    :param length: The length of the line.
+    :param direction: The direction of the line. Options: "up", "down", "left", "right".
+    :param num_points: The number of points to generate along the line.
+    :return: A list of tuples: [(x1, y1), (x2, y2), ...].
+    """
+    x_start, y_start = start_point
+
+    if direction == "right":
+        x_end = x_start + length
+        y_end = y_start
+    elif direction == "left":
+        x_end = x_start - length
+        y_end = y_start
+    elif direction == "up":
+        x_end = x_start
+        y_end = y_start + length
+    elif direction == "down":
+        x_end = x_start
+        y_end = y_start - length
+    else:
+        raise ValueError("Direction must be 'up', 'down', 'left', or 'right'")
+
+    # Generate coordinates
+    x_coords = np.linspace(x_start, x_end, num_points)
+    y_coords = np.linspace(y_start, y_end, num_points)
+
+    return list(zip(x_coords, y_coords))
+
+def start_tdw_server(display=":4", port=1071):
+    # DISPLAY=:4 /data/shared/sim/benchmark/tdw/build/TDW.x86_64 -port=1071
+    command = f"DISPLAY={display} /data/shared/sim/benchmark/tdw/build/TDW.x86_64 -port={port}"
+    process = subprocess.Popen(command, shell=True)
+    time.sleep(5)  # Wait for the server to start
+    return process

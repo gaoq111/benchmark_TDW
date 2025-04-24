@@ -1,4 +1,4 @@
-from utils import *
+from utils import generate_square_coords, generate_circle_coords, generate_triangle_coords
 from tdw.controller import Controller
 from tdw.tdw_utils import TDWUtils
 from tdw.add_ons.third_person_camera import ThirdPersonCamera
@@ -11,11 +11,17 @@ from tdw.tdw_utils import TDWUtils
 from tdw.output_data import OutputData, FieldOfView
 from tdw.add_ons.third_person_camera import ThirdPersonCamera
 
+from tqdm import tqdm
+from consts import COLORS
+
 import argparse
 import os
 import time
 import yaml
 import subprocess
+import random
+import json
+import copy
 
 # Initiate a tdw server:
 # The server might exit when there are errors in executing the commands 
@@ -35,24 +41,43 @@ def get_cameras(camera_id, camera_config):
                             look_at=camera_config['look_at'],)
 
 def get_position(pos_name, object_config):
-    return object_config[pos_name]                    
+    return object_config[pos_name]
 
-def get_action_coordinates(action, center):
+def generate_objects(object_list, n=1):
+    object_names = random.choices(object_list, k=n)
+    return object_names
+
+def generate_colors(colors, n=6):
+    """
+    Select the number of colors from a given dictionary.
+
+    :param colors: The colors dictionary.
+    :param n: The number of colors to select.
+    :return: A list of tuples: [ ('Color1', (r1, g1, b1)),  ('Color2', (r2, g2, b2)), ...]
+    """
+    processed_colors = []
+    selected_colors = random.sample(list(colors.items()), n)
+    for color in selected_colors:
+        color_name, color_value = color
+        color_new_value = tuple(value / 255 for value in color_value)
+        processed_colors.append((color_name, color_new_value))
+    return processed_colors                  
+
+def get_action_coordinates(action, radius, center):
     if action is None:
         return None
     else:
-        traj, num = action.split("_")
-        if traj == 'circle':
-            radius = float(num)
+        if action == 'circle':
+            radius = float(radius)
             return generate_circle_coords(num_points=30, radius=radius, center=center)
-        if traj == 'square':
-            side_length = float(num)
-            return generate_square_coords(num_points=30, side_length=side_length)
-        if traj == 'triangle':
-            side_length = float(num)
-            return generate_triangle_coords(num_points=30, side_length=side_length)
+        if action == 'square':
+            side_length = float(radius)
+            return generate_square_coords(num_points=30, side_length=side_length, center=center)
+        if action == 'triangle':
+            side_length = float(radius)
+            return generate_triangle_coords(num_points=30, side_length=side_length, center=center)
 
-def start_tdw_server(display=":4", port=1071):
+def start_tdw_server(display=":4", port=1072):
     command = f"DISPLAY={display} /data/shared/sim/benchmark/tdw/build/TDW.x86_64 -port={port}"
     process = subprocess.Popen(command, shell=True)
     time.sleep(5)  # Wait for the server to start
@@ -60,128 +85,174 @@ def start_tdw_server(display=":4", port=1071):
         
 
 def main(args):
-    server_process = start_tdw_server(display=":4", port=1072)
+    server_process = start_tdw_server(display=":4", port=1073)
 
     try:
         # Launch TDW Build
-        c = Controller(port=1072, launch_build=False)
+        c = Controller(port=1073, launch_build=False)
 
-        start_time = time.time()
-        output_path = args.output_path  #EXAMPLE_CONTROLLER_OUTPUT_PATH.joinpath("image_capture")
-        task_name = args.name
-        print(f"Images will be saved to: {os.path.join(output_path, task_name)}")
+        output_path = args.output_path
+        os.makedirs(output_path, exist_ok=True) 
 
         # read the camera and object configs
         with open('scene_settings.yaml', 'r') as file:
             congfig = yaml.safe_load(file)
-        camera_config = congfig[args.scene]['camera']
-        object_config = congfig[args.scene]['object']
 
-        # Camera specifying
-        for camera_id in args.cameras:
-            camera_id = camera_id.lower()
-            camera = get_cameras(camera_id, camera_config)
-            c.add_ons.append(camera)
-        capture = ImageCapture(avatar_ids=args.cameras, path=os.path.join(output_path, task_name), png=True)
-        c.add_ons.append(capture)
+        # Define scenes
+        scenes = ["empty_scene", "monkey_physics_room", "box_room_2018", "archviz_house", "ruin", "suburb_scene_2018"]
 
-        object_id = c.get_unique_id()
+        # Define materials
+        object_materials = ["limestone_white", "glass_chopped_strands", "sand_covered_stone_ground"]
 
-        # General rendering configurations
-        commands = [{"$type": "set_screen_size", "width": args.screen_size[0], "height": args.screen_size[1]}, 
-                    {"$type": "set_render_quality", "render_quality": args.render_quality},
-                    ]
+        # Define objects
+        object_list = ['prim_cube', 'prim_sphere']
         
-        #Initialize background
-        commands.append(c.get_add_scene(args.scene))
+        # Define Trajectories
+        trajactories = ['circle', 'triangle', 'square']
 
-        # get location
-        if args.custom_position is None:
-            x, y, z = get_position(args.object_position, object_config)
-        else:
-            x, y, z = args.custom_position
-        # x, y, z = get_position(args.object_position, object_config)
-        center = get_position('center', object_config)
-        center = [center[0], center[2]]
-        
-        # select the library
-        librarian = ModelLibrarian("models_special.json")
-        special_lib = []
-        for record in librarian.records:
-            special_lib.append(record.name)
-        if args.object in special_lib:
-            lib = "models_special.json"
-        else:
-            lib = "models_core.json"
+        # Define Trajectory Radius
+        radius = [0.3, 0.6, 1, 1.2]
 
-        # get the object
-        model_record = ModelLibrarian(lib).get_record(args.object)
-        commands.extend(c.get_add_physics_object(model_name=args.object,
-                                                library=lib,
-                                                position={"x": x,  "y": y, "z": z},
-                                                scale_factor={"x": args.size, "y": args.size, "z": args.size},
-                                                gravity=False,
-                                                default_physics_values=False,
-                                                object_id=object_id))
+        # Define Library
+        lib = "models_special.json"
 
-        # Change material of object if provided
-        if args.material is not None:
-            commands.append(c.get_add_material(material_name=args.material))
-            # Set all of the object's visual materials.
-            commands.extend(TDWUtils.set_visual_material(c=c, substructure=model_record.substructure, material=args.material, object_id=object_id))
+        # Define Camera
+        cameras = ['top']
+
+        # Define Size
+        size = 0.25
+
+        # Initialize image info
+        images_info = []
+
+        # Number of data per scene
+        num_data = 10
+
+        count = 0
+
+        for scene in tqdm(scenes, desc="Processing scenes"):
+            for camera_id in tqdm(cameras, leave=False):
+                for material in tqdm(object_materials, leave=False):
+                    for traj in tqdm(trajactories, leave=False):
+                        for traj_radius in tqdm(radius, leave=False):
+                            for _ in tqdm(range(num_data), leave=False):
+                                image_info = {}
+                                output_path = args.output_path
+
+                                # Camera and vision boundary setting
+                                camera_config = congfig[scene]['camera']
+                                object_config = congfig[scene]['object']
+                                # General rendering configurations
+                                commands = [{"$type": "set_screen_size", "width": args.screen_size[0], "height": args.screen_size[1]},
+                                            {"$type": "set_render_quality", "render_quality": args.render_quality}]
+
+                                # Initialize scene
+                                commands.append(c.get_add_scene(scene))
+
+                                # generate n objects, and colors
+                                n = 1
+                                initial_pos = get_position('right', object_config)
+                                object_center = get_position('center', object_config)
+                                object_center = [object_center[0], object_center[2]] # x-z plane
+                                objects = generate_objects(object_list, n=n)
+                                colors = generate_colors(COLORS, n=n)
+
+                                # get the object and set location
+                                model_records = []
+                                object_ids = []
             
-        # set color
-        if args.color is not None:
-            r, g, b = args.color
-            commands.append({"$type": "set_color", "color": {"r": r, "g": g, "b": b, "a": 1.0}, "id": object_id})
+                                object_id = c.get_unique_id()
+                                object_ids.append(object_id)
+                                model_record = ModelLibrarian(lib).get_record(objects[0])
+                                model_records.append(model_record)
 
-        # Get coordinates for motion trajectory
-        coordinates = get_action_coordinates(args.action, center)
-        if coordinates is not None:
-            for (x_d, z_d) in coordinates:
-                commands= [{"$type": "teleport_object", 
-                                "position": {"x": x_d, "z": z_d, "y": y}, 
-                                "id": object_id, "physics": False, "absolute": True, "use_centroid": False}]
-                c.communicate(commands)
-        
-        end_time = time.time()
+                                x, y, z = initial_pos
+                                commands.extend(c.get_add_physics_object(model_name=objects[0],
+                                                                        library=lib,
+                                                                        position={"x": x,  "y": y, "z": z},
+                                                                        scale_factor={"x": size, "y": size, "z": size},
+                                                                        gravity=False,
+                                                                        default_physics_values=False,
+                                                                        object_id=object_id))
+                                # set material
+                                commands.extend(TDWUtils.set_visual_material(c=c, substructure=model_record.substructure, material=material, object_id=object_id))
 
-        # Calculate elapsed time
-        elapsed_time = end_time - start_time
-        print(f"Completed. Total time: {elapsed_time:.4f} seconds")
-        
+                                # set color
+                                color_name, color_value = colors[0]
+                                r, g, b = color_value
+                                commands.append({"$type": "set_color", "color": {"r": r, "g": g, "b": b, "a": 1.0}, "id": object_id})
+
+                                c.communicate(commands)
+
+                                object = objects[0]
+                                object = object.split("_")[1]
+                                color = colors[0]
+                                color_name = color[0]
+                                color_name = color_name.replace('_', ' ')
+                                image_info["object"] = {
+                                                    "type": object,
+                                                    "material": material,
+                                                    "color": color_name,
+                                                    "size": size}
+
+                                # output setting
+                                task_name = f"scenario_{count}_{material}_{traj}_{traj_radius}"
+                                output_path = os.path.join(output_path, task_name)
+
+                                # Camera specifying
+                                camera_id = camera_id.lower()
+                                camera = get_cameras(camera_id, camera_config)
+                                c.add_ons.append(camera)
+
+                                capture = ImageCapture(avatar_ids=[camera_id], path=output_path, png=True)
+                                c.add_ons.append(capture)
+
+                                # Get coordinates for motion trajectory
+                                coordinates = get_action_coordinates(traj, traj_radius, object_center)
+                                if coordinates is not None:
+                                    for (x_d, z_d) in coordinates:
+                                        commands= [{"$type": "teleport_object", 
+                                                        "position": {"x": x_d, "z": z_d, "y": y}, 
+                                                        "id": object_id, "physics": False, "absolute": True, "use_centroid": False}]
+                                        c.communicate(commands)
+
+                                image_info["image_path"] = f"{output_path}/{camera_id}"
+                                image_info["scene"] = scene
+                                image_info["camera_view"] = camera_id
+                                image_info["trajectory"] = traj
+                                image_info["radius"] = traj_radius
+
+                                images_info.append(copy.deepcopy(image_info))
+                                count += 1
+
+                                # Reset for the next loop
+                                c.add_ons.clear() 
+                                c.communicate({"$type": "destroy_all_objects"})
+                                c.communicate(TDWUtils.create_empty_room(12, 12))
+
     finally:
+        # Save object info to JSON
+        output_path = args.output_path
+        with open(os.path.join(output_path, "trajectory.json"), 'w') as f:
+            json.dump(images_info, f, indent=4)
+
+        l = len(images_info)
+        print(f"{l} scenarios generated.")
+
         # Terminate the server after the job is done
         c.communicate({"$type": "terminate"})
         server_process.terminate()
         server_process.wait()
 
-# DISPLAY=:4 /data/shared/sim/benchmark/tdw/build/TDW.x86_64 -port=1071
-# python trajectory.py --output "/data/shared/sim/benchmark/tdw/image_capture/test" --cameras top --name test2 --action circle_1 --size 0.3
 if __name__ == "__main__":
+    random.seed(39)
     parser = argparse.ArgumentParser()
     # Screen size
     parser.add_argument("--screen_size", type=int, nargs='+', default=(512, 512), help="Width and Height of Screen. (W, H)")
-    # Cameras
-    parser.add_argument("--cameras", type=str, nargs='+', default=['top'], choices=['top', 'left', 'right', 'front', 'back'], help="Set which cameras to enable.")
     # Output Path
     parser.add_argument("--output_path", type=str, required=True, help="The path to save the outputs to.")
     # Render Quality
     parser.add_argument("--render_quality", type=int, default=5, help="The Render Quality of the output.")
-    # Scene
-    parser.add_argument("--scene", type=str, default="empty_scene", help="The Scene to initialize.")
-    # Object
-    parser.add_argument("--object", type=str, default="prim_sphere")
-    parser.add_argument("--object_position", type=str, default="center", choices=['center', 'top', 'right', 'bottom', 'left'], help="Set the objects inital position.")
-    parser.add_argument("--custom_position", type=float, nargs='+', default=None, help="Set the objects inital (x,y,z) coordinates.")
-    parser.add_argument("--size", type=float, default=0.25, help="Scale of the object")
-    parser.add_argument("--color", type=float, nargs='+', default=None, help="Color of the object (RGB)")
-    # Action
-    parser.add_argument("--action", type=str, default=None, help="Format: [trajectory]_[radius]")
-    # Task Name
-    parser.add_argument("--name", type=str, default="test", help="The name of the task.")
-    # Material
-    parser.add_argument("--material", type=str, default=None, help="The material of the object.")
 
     args = parser.parse_args()
 
